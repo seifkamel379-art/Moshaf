@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "vNjnjJJkx5CpJjPiQ77bk"
+uri = "file://artifacts/mushaf/assets/images/icon.png"
+type = "image"
+title = "mushaf_icon"
