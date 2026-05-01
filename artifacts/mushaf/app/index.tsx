@@ -2,7 +2,8 @@ import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import React, { useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useState, useRef } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -12,6 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -20,6 +22,7 @@ export default function WelcomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [name, setName] = useState("");
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   if (!loaded) return null;
 
@@ -27,6 +30,14 @@ export default function WelcomeScreen() {
     router.replace("/(tabs)/mushaf");
     return null;
   }
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: true }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
+  };
 
   const handleContinue = () => {
     const trimmed = name.trim();
@@ -41,38 +52,49 @@ export default function WelcomeScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={[styles.inner, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20 }]}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={require("@/assets/images/icon.png")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+      <LinearGradient
+        colors={[colors.background, colors.card, colors.background]}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+      <View style={[styles.inner, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 20 }]}>
+        <View style={styles.logoWrapper}>
+          <View style={[styles.logoShadow, { shadowColor: colors.primary }]}>
+            <Image
+              source={require("@/assets/images/logo.png")}
+              style={styles.logo}
+              resizeMode="cover"
+            />
+          </View>
         </View>
 
-        <Text style={[styles.appName, { color: colors.primary }]}>المصحف المثمن</Text>
-        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-          بسم الله الرحمن الرحيم
+        <View style={styles.titleBlock}>
+          <Text style={[styles.appName, { color: colors.primary }]}>المصحف المثمن</Text>
+          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+            برواية ورش عن نافع
+          </Text>
+        </View>
+
+        <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+
+        <Text style={[styles.welcomeText, { color: colors.foreground }]}>
+          أدخل اسمك لبدء رحلتك
         </Text>
 
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.welcomeText, { color: colors.foreground }]}>
-            أهلاً وسهلاً بك
-          </Text>
-          <Text style={[styles.welcomeSubtext, { color: colors.mutedForeground }]}>
-            أدخل اسمك للبدء في رحلتك مع القرآن الكريم
-          </Text>
-
+        <View
+          style={[
+            styles.inputWrapper,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              shadowColor: colors.primary,
+            },
+          ]}
+        >
           <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: colors.background,
-                borderColor: colors.border,
-                color: colors.foreground,
-              },
-            ]}
-            placeholder="اسمك"
+            style={[styles.input, { color: colors.foreground }]}
+            placeholder="اسمك الكريم..."
             placeholderTextColor={colors.mutedForeground}
             value={name}
             onChangeText={setName}
@@ -81,25 +103,36 @@ export default function WelcomeScreen() {
             onSubmitEditing={handleContinue}
             autoFocus
           />
-
-          <TouchableOpacity
-            style={[
-              styles.button,
-              { backgroundColor: name.trim() ? colors.primary : colors.muted },
-            ]}
-            onPress={handleContinue}
-            activeOpacity={0.8}
-          >
-            <Text
-              style={[
-                styles.buttonText,
-                { color: name.trim() ? colors.primaryForeground : colors.mutedForeground },
-              ]}
-            >
-              ابدأ القراءة
-            </Text>
-          </TouchableOpacity>
         </View>
+
+        <Animated.View style={{ transform: [{ scale: scaleAnim }], width: "100%" }}>
+          <TouchableOpacity
+            onPress={handleContinue}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            activeOpacity={1}
+          >
+            <LinearGradient
+              colors={
+                name.trim()
+                  ? [colors.accent, colors.primary]
+                  : [colors.muted, colors.secondary]
+              }
+              style={styles.button}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Text
+                style={[
+                  styles.buttonText,
+                  { color: name.trim() ? colors.primaryForeground : colors.mutedForeground },
+                ]}
+              >
+                ابدأ القراءة
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
 
         <Text style={[styles.footer, { color: colors.mutedForeground }]}>
           made by Seif kamel
@@ -116,78 +149,75 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 28,
-    gap: 16,
+    gap: 18,
   },
-  logoContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 28,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
+  logoWrapper: {
+    alignItems: "center",
+    marginBottom: 4,
   },
-  logo: { width: "100%", height: "100%" },
+  logoShadow: {
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+    borderRadius: 80,
+  },
+  logo: {
+    width: 148,
+    height: 148,
+    borderRadius: 74,
+  },
+  titleBlock: { alignItems: "center", gap: 4 },
   appName: {
-    fontSize: 28,
-    fontWeight: "700" as const,
-    fontFamily: "Inter_700Bold",
+    fontSize: 30,
+    fontFamily: "Amiri_700Bold",
     textAlign: "center",
-    letterSpacing: 1,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
+    fontFamily: "Amiri_400Regular",
     textAlign: "center",
-    fontFamily: "Inter_400Regular",
   },
-  card: {
-    width: "100%",
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 24,
-    gap: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
+  dividerLine: {
+    width: 80,
+    height: 1,
+    borderRadius: 1,
   },
   welcomeText: {
-    fontSize: 20,
-    fontWeight: "700" as const,
-    fontFamily: "Inter_700Bold",
+    fontSize: 17,
+    fontFamily: "Cairo_600SemiBold",
     textAlign: "center",
   },
-  welcomeSubtext: {
-    fontSize: 14,
-    textAlign: "center",
-    fontFamily: "Inter_400Regular",
-    lineHeight: 22,
+  inputWrapper: {
+    width: "100%",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
   },
   input: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    fontSize: 17,
+    fontFamily: "Cairo_400Regular",
   },
   button: {
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderRadius: 14,
+    paddingVertical: 15,
     alignItems: "center",
+    width: "100%",
   },
   buttonText: {
-    fontSize: 16,
-    fontWeight: "600" as const,
-    fontFamily: "Inter_600SemiBold",
+    fontSize: 17,
+    fontFamily: "Cairo_700Bold",
   },
   footer: {
     fontSize: 11,
+    fontFamily: "Cairo_400Regular",
     textAlign: "center",
-    fontFamily: "Inter_400Regular",
-    marginTop: 8,
+    marginTop: 4,
+    letterSpacing: 0.5,
   },
 });

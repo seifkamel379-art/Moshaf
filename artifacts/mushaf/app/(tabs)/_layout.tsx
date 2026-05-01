@@ -1,16 +1,15 @@
-import { Feather } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { BlurView } from "expo-blur";
 import { useColors } from "@/hooks/useColors";
 import { useApp } from "@/context/AppContext";
+import { Icon3D } from "@/components/Icon3D";
 
 export default function TabLayout() {
   const colors = useColors();
   const { isDark } = useApp();
   const isIOS = Platform.OS === "ios";
-  const isWeb = Platform.OS === "web";
 
   return (
     <Tabs
@@ -21,46 +20,58 @@ export default function TabLayout() {
         tabBarStyle: {
           position: "absolute",
           backgroundColor: isIOS ? "transparent" : colors.tabBar,
-          borderTopWidth: 0,
-          elevation: 0,
-          height: isWeb ? 84 : 60,
-          paddingBottom: isWeb ? 34 : 8,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: colors.border,
+          elevation: 12,
+          height: Platform.OS === "web" ? 84 : 68,
+          paddingBottom: Platform.OS === "web" ? 24 : 10,
+          paddingTop: 6,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontFamily: "Inter_500Medium",
+          fontSize: 12,
+          fontFamily: "Cairo_600SemiBold",
         },
         tabBarBackground: () =>
           isIOS ? (
             <BlurView
-              intensity={90}
-              tint={isDark ? "dark" : "light"}
+              intensity={95}
+              tint={isDark ? "systemChromeMaterialDark" : "systemChromeMaterial"}
               style={StyleSheet.absoluteFill}
             />
-          ) : isWeb ? (
+          ) : (
             <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.tabBar }]} />
-          ) : null,
+          ),
       }}
     >
       <Tabs.Screen
         name="mushaf"
         options={{
           title: "المصحف",
-          tabBarIcon: ({ color }) => <Feather name="book-open" size={22} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <Icon3D name="book" color={color} size={26} active={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="index"
         options={{
           title: "الفهرس",
-          tabBarIcon: ({ color }) => <Feather name="list" size={22} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <Icon3D name="list" color={color} size={26} active={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: "الخصائص",
-          tabBarIcon: ({ color }) => <Feather name="settings" size={22} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <Icon3D name="sliders" color={color} size={26} active={focused} />
+          ),
         }}
       />
     </Tabs>

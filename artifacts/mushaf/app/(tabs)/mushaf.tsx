@@ -1,38 +1,80 @@
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 import { getHizbForPage, getJuzForPage, getSurahsForPage, TOTAL_PAGES } from "@/data/surahs";
-import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
   FlatList,
+  Image,
+  Modal,
   Platform,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const PAGE_HEIGHT = SCREEN_HEIGHT;
+const { width: SW, height: SH } = Dimensions.get("window");
+
+function BookmarkFlag({ colors }: { colors: ReturnType<typeof useColors> }) {
+  return (
+    <View style={[flagStyles.flag, { backgroundColor: colors.primary }]}>
+      <View style={flagStyles.triangle} />
+      <View style={[flagStyles.body, { backgroundColor: colors.primary }]}>
+        <View style={[flagStyles.ribbon, { backgroundColor: colors.accent }]} />
+      </View>
+    </View>
+  );
+}
+
+const flagStyles = StyleSheet.create({
+  flag: {
+    position: "absolute",
+    top: 0,
+    right: 20,
+    width: 24,
+    zIndex: 20,
+    alignItems: "center",
+  },
+  body: {
+    width: 24,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  triangle: {
+    position: "absolute",
+    bottom: -8,
+    left: 0,
+    right: 0,
+    height: 0,
+    borderLeftWidth: 12,
+    borderRightWidth: 12,
+    borderTopWidth: 9,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderTopColor: "#8B6914",
+  },
+  ribbon: {
+    width: 12,
+    height: 2,
+    borderRadius: 1,
+  },
+});
 
 function MushafPage({
   pageNumber,
-  fontSize,
-  opacity,
-  brightness,
   isDark,
   colors,
   onDoublePress,
   isBookmarked,
 }: {
   pageNumber: number;
-  fontSize: number;
-  opacity: number;
-  brightness: number;
   isDark: boolean;
   colors: ReturnType<typeof useColors>;
   onDoublePress: (page: number) => void;
@@ -42,89 +84,226 @@ function MushafPage({
 
   const handlePress = () => {
     const now = Date.now();
-    if (now - lastTap.current < 400) {
+    if (now - lastTap.current < 380) {
       onDoublePress(pageNumber);
     }
     lastTap.current = now;
   };
 
-  const bgColor = isDark
-    ? `rgba(26,18,8,${opacity})`
-    : `rgba(245,237,214,${opacity})`;
-
   const surahsOnPage = getSurahsForPage(pageNumber);
   const juz = getJuzForPage(pageNumber);
   const hizb = getHizbForPage(pageNumber);
+
+  const bgStart = isDark ? "#1E1508" : "#F7EFDA";
+  const bgEnd = isDark ? "#150F04" : "#EFE4C0";
 
   return (
     <TouchableOpacity
       activeOpacity={1}
       onPress={handlePress}
-      style={[
-        styles.page,
-        {
-          width: SCREEN_WIDTH,
-          height: PAGE_HEIGHT,
-          backgroundColor: bgColor,
-          opacity: brightness,
-        },
-      ]}
+      style={{ width: SW, height: SH }}
     >
-      {isBookmarked && (
-        <View style={[styles.bookmarkFlag, { backgroundColor: colors.primary }]}>
-          <Feather name="bookmark" size={14} color={colors.primaryForeground} />
-        </View>
-      )}
+      <LinearGradient colors={[bgStart, bgEnd]} style={StyleSheet.absoluteFill} />
 
-      <View style={[styles.pageHeader, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.pageHeaderText, { color: colors.mutedForeground, fontSize: 11 * fontSize }]}>
-          الجزء {juz} • الحزب {hizb}
+      {isBookmarked && <BookmarkFlag colors={colors} />}
+
+      <View style={[pageStyles.header, { borderBottomColor: colors.border }]}>
+        <Text style={[pageStyles.headerMeta, { color: colors.mutedForeground }]}>
+          الجزء {juz}
         </Text>
-        <Text style={[styles.pageHeaderText, { color: colors.mutedForeground, fontSize: 11 * fontSize }]}>
-          {surahsOnPage.map((s) => s.nameAr).join(" • ")}
+        <View style={[pageStyles.headerDot, { backgroundColor: colors.accent }]} />
+        <Text style={[pageStyles.headerMeta, { color: colors.mutedForeground }]}>
+          الحزب {hizb}
+        </Text>
+        <View style={[pageStyles.headerDot, { backgroundColor: colors.accent }]} />
+        <Text style={[pageStyles.headerMeta, { color: colors.mutedForeground }]}>
+          {surahsOnPage.map((s) => s.nameAr).join(" / ")}
         </Text>
       </View>
 
-      <View style={styles.pageContent}>
-        <View style={[styles.quranFrame, { borderColor: colors.border }]}>
-          <View style={[styles.innerFrame, { borderColor: colors.accent }]}>
-            <Text style={[styles.pageNumberText, { color: colors.primary, fontSize: 14 * fontSize }]}>
-              بسم الله الرحمن الرحيم
+      <View style={pageStyles.pageBody}>
+        <View style={[pageStyles.outerBorder, { borderColor: colors.border }]}>
+          <View style={[pageStyles.innerBorder, { borderColor: colors.accent + "60" }]}>
+            <View style={pageStyles.cornerTL} />
+            <View style={pageStyles.cornerTR} />
+            <View style={pageStyles.cornerBL} />
+            <View style={pageStyles.cornerBR} />
+            <Text style={[pageStyles.pageNum, { color: colors.primary }]}>
+              {pageNumber}
             </Text>
-            <Text style={[styles.placeholderText, { color: colors.mutedForeground, fontSize: 13 * fontSize }]}>
-              الصفحة {pageNumber}
+            <Text style={[pageStyles.mainTitle, { color: colors.primary }]}>
+              {surahsOnPage.length > 0
+                ? `سورة ${surahsOnPage[0].nameAr}`
+                : `صفحة ${pageNumber}`}
             </Text>
-            <Text style={[styles.arabicPlaceholder, { color: colors.foreground, fontSize: 20 * fontSize, lineHeight: 36 * fontSize }]}>
-              {getPageSampleText(pageNumber)}
+            {surahsOnPage.length > 0 && pageNumber !== 1 && (
+              <Text style={[pageStyles.basmala, { color: colors.foreground }]}>
+                بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ
+              </Text>
+            )}
+            <Text style={[pageStyles.placeholder, { color: colors.mutedForeground }]}>
+              ارفع ملف المصحف لعرض الصفحات
+            </Text>
+            <Text style={[pageStyles.tapHint, { color: colors.mutedForeground + "80" }]}>
+              انقر مرتين لإضافة علامة حفظ
             </Text>
           </View>
         </View>
       </View>
 
-      <View style={[styles.pageFooter, { borderTopColor: colors.border }]}>
-        <Text style={[styles.pageNumberFooter, { color: colors.mutedForeground, fontSize: 12 * fontSize }]}>
+      <View style={[pageStyles.footer, { borderTopColor: colors.border }]}>
+        <View style={[pageStyles.footerLine, { backgroundColor: colors.accent + "40" }]} />
+        <Text style={[pageStyles.footerNum, { color: colors.mutedForeground }]}>
           {pageNumber}
         </Text>
+        <View style={[pageStyles.footerLine, { backgroundColor: colors.accent + "40" }]} />
       </View>
     </TouchableOpacity>
   );
 }
 
-function getPageSampleText(page: number): string {
-  const surahsOnPage = getSurahsForPage(page);
-  if (surahsOnPage.length > 0) {
-    return `سورة ${surahsOnPage[0].nameAr}\n\nارفع ملف PDF المصحف\nليتم عرض الصفحات بشكل صحيح`;
-  }
-  return `صفحة ${page}\n\nارفع ملف PDF المصحف\nليتم عرض محتوى الصفحات`;
-}
+const pageStyles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 8,
+  },
+  headerMeta: {
+    fontFamily: "Cairo_400Regular",
+    fontSize: 12,
+  },
+  headerDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    opacity: 0.6,
+  },
+  pageBody: {
+    flex: 1,
+    padding: 10,
+  },
+  outerBorder: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderRadius: 4,
+    padding: 6,
+  },
+  innerBorder: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 14,
+    padding: 16,
+    position: "relative",
+  },
+  cornerTL: {
+    position: "absolute",
+    top: 6,
+    left: 6,
+    width: 14,
+    height: 14,
+    borderTopWidth: 2,
+    borderLeftWidth: 2,
+    borderColor: "#C4A44A",
+  },
+  cornerTR: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 14,
+    height: 14,
+    borderTopWidth: 2,
+    borderRightWidth: 2,
+    borderColor: "#C4A44A",
+  },
+  cornerBL: {
+    position: "absolute",
+    bottom: 6,
+    left: 6,
+    width: 14,
+    height: 14,
+    borderBottomWidth: 2,
+    borderLeftWidth: 2,
+    borderColor: "#C4A44A",
+  },
+  cornerBR: {
+    position: "absolute",
+    bottom: 6,
+    right: 6,
+    width: 14,
+    height: 14,
+    borderBottomWidth: 2,
+    borderRightWidth: 2,
+    borderColor: "#C4A44A",
+  },
+  pageNum: {
+    fontFamily: "Amiri_700Bold",
+    fontSize: 13,
+    opacity: 0.5,
+    position: "absolute",
+    top: 20,
+  },
+  mainTitle: {
+    fontFamily: "Amiri_700Bold",
+    fontSize: 22,
+    textAlign: "center",
+  },
+  basmala: {
+    fontFamily: "Amiri_400Regular",
+    fontSize: 18,
+    textAlign: "center",
+  },
+  placeholder: {
+    fontFamily: "Cairo_400Regular",
+    fontSize: 13,
+    textAlign: "center",
+  },
+  tapHint: {
+    fontFamily: "Cairo_400Regular",
+    fontSize: 11,
+    textAlign: "center",
+  },
+  footer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: 10,
+  },
+  footerLine: {
+    flex: 1,
+    height: 1,
+    borderRadius: 1,
+  },
+  footerNum: {
+    fontFamily: "Amiri_700Bold",
+    fontSize: 14,
+  },
+});
 
 export default function MushafScreen() {
-  const { currentPage, setCurrentPage, addBookmark, removeBookmark, isBookmarked, fontSize, brightness, opacity, isDark, markPageRead } = useApp();
+  const {
+    currentPage,
+    setCurrentPage,
+    addBookmark,
+    removeBookmark,
+    isBookmarked,
+    isDark,
+    markPageRead,
+  } = useApp();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
-  const [showPageInput, setShowPageInput] = useState(false);
-  const floatingOpacity = useRef(new Animated.Value(1)).current;
+  const [showGoTo, setShowGoTo] = useState(false);
+  const [goToInput, setGoToInput] = useState("");
+  const floatingAnim = useRef(new Animated.Value(0)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const surahsOnPage = getSurahsForPage(currentPage);
@@ -132,25 +311,17 @@ export default function MushafScreen() {
   const hizb = getHizbForPage(currentPage);
 
   const showFloating = () => {
-    Animated.timing(floatingOpacity, {
-      toValue: 1,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
+    Animated.timing(floatingAnim, { toValue: 1, duration: 250, useNativeDriver: true }).start();
     if (hideTimer.current) clearTimeout(hideTimer.current);
     hideTimer.current = setTimeout(() => {
-      Animated.timing(floatingOpacity, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      }).start();
-    }, 3000);
+      Animated.timing(floatingAnim, { toValue: 0, duration: 600, useNativeDriver: true }).start();
+    }, 3500);
   };
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: Array<{ index: number | null }> }) => {
       if (viewableItems.length > 0 && viewableItems[0].index !== null) {
-        const page = viewableItems[0].index + 1;
+        const page = TOTAL_PAGES - viewableItems[0].index;
         setCurrentPage(page);
         markPageRead(page);
         showFloating();
@@ -165,10 +336,10 @@ export default function MushafScreen() {
         removeBookmark(page);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       } else {
-        const surahsArr = getSurahsForPage(page);
+        const arr = getSurahsForPage(page);
         addBookmark({
           page,
-          surahName: surahsArr.length > 0 ? surahsArr[0].nameAr : `صفحة ${page}`,
+          surahName: arr.length > 0 ? arr[0].nameAr : `صفحة ${page}`,
           verseHint: `الجزء ${getJuzForPage(page)}`,
         });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -177,9 +348,19 @@ export default function MushafScreen() {
     [isBookmarked, removeBookmark, addBookmark]
   );
 
-  const pages = Array.from({ length: TOTAL_PAGES }, (_, i) => i + 1);
+  const pages = Array.from({ length: TOTAL_PAGES }, (_, i) => TOTAL_PAGES - i);
+  const tabBarH = Platform.OS === "web" ? 84 : 68;
 
-  const tabBarHeight = Platform.OS === "web" ? 84 : 60;
+  const handleGoTo = () => {
+    const p = parseInt(goToInput, 10);
+    if (p >= 1 && p <= TOTAL_PAGES) {
+      const index = TOTAL_PAGES - p;
+      flatListRef.current?.scrollToIndex({ index, animated: true });
+      setCurrentPage(p);
+    }
+    setShowGoTo(false);
+    setGoToInput("");
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -190,9 +371,6 @@ export default function MushafScreen() {
         renderItem={({ item }) => (
           <MushafPage
             pageNumber={item}
-            fontSize={fontSize}
-            opacity={opacity}
-            brightness={brightness}
             isDark={isDark}
             colors={colors}
             onDoublePress={handleDoublePress}
@@ -200,143 +378,186 @@ export default function MushafScreen() {
           />
         )}
         horizontal
-        inverted
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        initialScrollIndex={TOTAL_PAGES - currentPage}
+        initialScrollIndex={0}
         getItemLayout={(_, index) => ({
-          length: SCREEN_WIDTH,
-          offset: SCREEN_WIDTH * index,
+          length: SW,
+          offset: SW * index,
           index,
         })}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
         windowSize={5}
         maxToRenderPerBatch={3}
-        initialNumToRender={3}
+        initialNumToRender={2}
         removeClippedSubviews={Platform.OS !== "web"}
-        contentContainerStyle={{ paddingBottom: tabBarHeight }}
       />
 
       <Animated.View
         style={[
           styles.floatingBar,
           {
-            backgroundColor: colors.floatingBar,
             borderColor: colors.border,
-            bottom: tabBarHeight + 8 + insets.bottom,
-            opacity: floatingOpacity,
+            bottom: tabBarH + 10 + insets.bottom,
+            opacity: floatingAnim,
+            transform: [{ translateY: floatingAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }],
           },
         ]}
         pointerEvents="none"
       >
-        <Text style={[styles.floatingText, { color: colors.foreground }]}>
-          {surahsOnPage.map((s) => s.nameAr).join(" • ")}
-        </Text>
-        <View style={styles.floatingDivider} />
-        <Text style={[styles.floatingSubtext, { color: colors.mutedForeground }]}>
-          الجزء {juz} • الحزب {hizb} • ص {currentPage}
-        </Text>
+        <LinearGradient
+          colors={isDark ? ["rgba(34,26,10,0.97)", "rgba(26,18,8,0.95)"] : ["rgba(248,242,224,0.97)", "rgba(240,230,200,0.95)"]}
+          style={styles.floatingInner}
+        >
+          <Text style={[styles.floatingTitle, { color: colors.foreground }]}>
+            {surahsOnPage.map((s) => s.nameAr).join("  •  ")}
+          </Text>
+          <View style={[styles.floatingRow]}>
+            <Text style={[styles.floatingMeta, { color: colors.primary }]}>
+              الجزء {juz}
+            </Text>
+            <View style={[styles.floatingDot, { backgroundColor: colors.accent }]} />
+            <Text style={[styles.floatingMeta, { color: colors.primary }]}>
+              الحزب {hizb}
+            </Text>
+            <View style={[styles.floatingDot, { backgroundColor: colors.accent }]} />
+            <Text style={[styles.floatingMeta, { color: colors.mutedForeground }]}>
+              صفحة {currentPage}
+            </Text>
+          </View>
+        </LinearGradient>
       </Animated.View>
+
+      <TouchableOpacity
+        style={[styles.goToBtn, { backgroundColor: colors.card, borderColor: colors.border, bottom: tabBarH + 10 + insets.bottom }]}
+        onPress={() => setShowGoTo(true)}
+      >
+        <Text style={[styles.goToBtnText, { color: colors.primary }]}>↗</Text>
+      </TouchableOpacity>
+
+      <Modal visible={showGoTo} transparent animationType="fade" onRequestClose={() => setShowGoTo(false)}>
+        <TouchableOpacity style={styles.modalBg} activeOpacity={1} onPress={() => setShowGoTo(false)}>
+          <View style={[styles.goToCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.goToTitle, { color: colors.foreground }]}>الذهاب لصفحة</Text>
+            <TextInput
+              style={[styles.goToInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+              placeholder={`1 - ${TOTAL_PAGES}`}
+              placeholderTextColor={colors.mutedForeground}
+              value={goToInput}
+              onChangeText={setGoToInput}
+              keyboardType="number-pad"
+              textAlign="center"
+              autoFocus
+              onSubmitEditing={handleGoTo}
+            />
+            <TouchableOpacity style={[styles.goToConfirm, { backgroundColor: colors.primary }]} onPress={handleGoTo}>
+              <Text style={[styles.goToConfirmText, { color: colors.primaryForeground }]}>انتقال</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  page: {
-    flex: 1,
-    flexDirection: "column",
-  },
-  pageHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  pageHeaderText: {
-    fontFamily: "Inter_400Regular",
-  },
-  pageContent: {
-    flex: 1,
-    padding: 12,
-  },
-  quranFrame: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderRadius: 4,
-    padding: 8,
-  },
-  innerFrame: {
-    flex: 1,
-    borderWidth: 0.5,
-    borderRadius: 2,
-    padding: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  pageNumberText: {
-    fontFamily: "Inter_600SemiBold",
-    textAlign: "center",
-  },
-  placeholderText: {
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
-  },
-  arabicPlaceholder: {
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-  pageFooter: {
-    alignItems: "center",
-    paddingVertical: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  pageNumberFooter: {
-    fontFamily: "Inter_400Regular",
-  },
-  bookmarkFlag: {
-    position: "absolute",
-    top: 0,
-    right: 24,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderBottomLeftRadius: 6,
-    borderBottomRightRadius: 6,
-    zIndex: 10,
-  },
   floatingBar: {
     position: "absolute",
-    left: 16,
-    right: 16,
-    borderRadius: 12,
+    left: 20,
+    right: 64,
+    borderRadius: 14,
     borderWidth: 1,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  floatingInner: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     alignItems: "center",
     gap: 4,
+  },
+  floatingTitle: {
+    fontFamily: "Amiri_700Bold",
+    fontSize: 15,
+    textAlign: "center",
+  },
+  floatingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  floatingMeta: {
+    fontFamily: "Cairo_400Regular",
+    fontSize: 12,
+  },
+  floatingDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    opacity: 0.7,
+  },
+  goToBtn: {
+    position: "absolute",
+    right: 14,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  floatingText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    textAlign: "center",
+  goToBtnText: {
+    fontSize: 18,
+    fontWeight: "700",
   },
-  floatingDivider: {
-    height: StyleSheet.hairlineWidth,
-    width: "80%",
-    backgroundColor: "#ccc",
+  modalBg: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 30,
   },
-  floatingSubtext: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    textAlign: "center",
+  goToCard: {
+    width: "100%",
+    maxWidth: 300,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 20,
+    gap: 12,
+    alignItems: "center",
+  },
+  goToTitle: {
+    fontFamily: "Cairo_700Bold",
+    fontSize: 18,
+  },
+  goToInput: {
+    width: "100%",
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    fontSize: 20,
+    fontFamily: "Cairo_400Regular",
+  },
+  goToConfirm: {
+    width: "100%",
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  goToConfirmText: {
+    fontSize: 15,
+    fontFamily: "Cairo_700Bold",
   },
 });

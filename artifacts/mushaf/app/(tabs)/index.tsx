@@ -1,8 +1,8 @@
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 import { SURAHS } from "@/data/surahs";
-import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -42,39 +42,39 @@ export default function IndexScreen() {
     router.push("/(tabs)/mushaf");
   };
 
-  const tabBarHeight = Platform.OS === "web" ? 84 : 60;
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const tabBarH = Platform.OS === "web" ? 84 : 68;
+  const topPad = Platform.OS === "web" ? 24 : insets.top;
+
+  const getJuzLabel = (juz: number) => `جزء ${juz}`;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.card,
-            borderBottomColor: colors.border,
-            paddingTop: topPad + 12,
-          },
-        ]}
+      <LinearGradient
+        colors={[colors.card, colors.background]}
+        style={[styles.header, { paddingTop: topPad + 12 }]}
       >
         <View style={styles.headerRow}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>الفهرس</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>فهرس السور</Text>
           {lastBookmark && (
             <TouchableOpacity
-              style={[styles.bookmarkBtn, { backgroundColor: colors.primary }]}
+              style={[styles.bookmarkChip, { backgroundColor: colors.primary }]}
               onPress={goToBookmark}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
             >
-              <Feather name="bookmark" size={14} color={colors.primaryForeground} />
-              <Text style={[styles.bookmarkBtnText, { color: colors.primaryForeground }]}>
-                آخر موضع
+              <Text style={[styles.bookmarkChipText, { color: colors.primaryForeground }]}>
+                آخر موضع • ص {lastBookmark.page}
               </Text>
             </TouchableOpacity>
           )}
         </View>
 
-        <View style={[styles.searchBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
-          <Feather name="search" size={16} color={colors.mutedForeground} />
+        <View
+          style={[
+            styles.searchContainer,
+            { backgroundColor: colors.background, borderColor: colors.border },
+          ]}
+        >
+          <Text style={[styles.searchIcon, { color: colors.mutedForeground }]}>🔍</Text>
           <TextInput
             style={[styles.searchInput, { color: colors.foreground }]}
             placeholder="ابحث عن سورة..."
@@ -83,55 +83,74 @@ export default function IndexScreen() {
             onChangeText={setSearch}
             textAlign="right"
           />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")}>
+              <Text style={[styles.clearBtn, { color: colors.mutedForeground }]}>✕</Text>
+            </TouchableOpacity>
+          )}
         </View>
-      </View>
+      </LinearGradient>
 
       <FlatList
         data={filtered}
-        keyExtractor={(item) => String(item.number)}
-        contentContainerStyle={{ paddingBottom: tabBarHeight + insets.bottom + 8 }}
-        renderItem={({ item }) => (
+        keyExtractor={(s) => String(s.number)}
+        contentContainerStyle={{ paddingBottom: tabBarH + insets.bottom + 8, paddingTop: 4 }}
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item, index }) => (
           <TouchableOpacity
             style={[
-              styles.surahRow,
+              styles.row,
               {
-                backgroundColor: colors.card,
+                backgroundColor: index % 2 === 0 ? colors.card : colors.background,
                 borderBottomColor: colors.border,
               },
             ]}
             onPress={() => goToSurah(item.page)}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
           >
-            <View style={[styles.surahNumber, { backgroundColor: colors.primary }]}>
-              <Text style={[styles.surahNumberText, { color: colors.primaryForeground }]}>
-                {item.number}
-              </Text>
+            <View style={styles.rowLeft}>
+              <LinearGradient
+                colors={[colors.accent, colors.primary]}
+                style={styles.numberBadge}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={[styles.numberText, { color: colors.primaryForeground }]}>
+                  {item.number}
+                </Text>
+              </LinearGradient>
             </View>
 
-            <View style={styles.surahInfo}>
-              <View style={styles.surahNameRow}>
-                <Text style={[styles.surahNameAr, { color: colors.foreground }]}>
-                  {item.nameAr}
+            <View style={styles.rowCenter}>
+              <Text style={[styles.surahName, { color: colors.foreground }]}>
+                {item.nameAr}
+              </Text>
+              <View style={styles.metaRow}>
+                <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
+                  {item.verses} آية
                 </Text>
-                <Text style={[styles.surahNameEn, { color: colors.mutedForeground }]}>
-                  {item.name}
+                <View style={[styles.metaDot, { backgroundColor: colors.accent }]} />
+                <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
+                  {item.type === "meccan" ? "مكية" : "مدنية"}
+                </Text>
+                <View style={[styles.metaDot, { backgroundColor: colors.accent }]} />
+                <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
+                  {getJuzLabel(item.juz)}
                 </Text>
               </View>
-              <Text style={[styles.surahMeta, { color: colors.mutedForeground }]}>
-                {item.verses} آية • {item.type === "meccan" ? "مكية" : "مدنية"} • الجزء {item.juz}
-              </Text>
             </View>
 
-            <View style={styles.surahRight}>
-              <Text style={[styles.pageNumber, { color: colors.primary }]}>ص {item.page}</Text>
+            <View style={styles.rowRight}>
+              <View style={[styles.pageBadge, { borderColor: colors.border, backgroundColor: colors.background }]}>
+                <Text style={[styles.pageNum, { color: colors.primary }]}>
+                  {item.page}
+                </Text>
+              </View>
               {isBookmarked(item.page) && (
-                <Feather name="bookmark" size={14} color={colors.primary} />
+                <View style={[styles.bmDot, { backgroundColor: colors.primary }]} />
               )}
             </View>
           </TouchableOpacity>
-        )}
-        ItemSeparatorComponent={() => (
-          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.border }} />
         )}
       />
     </View>
@@ -142,95 +161,102 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    gap: 10,
+    paddingBottom: 14,
+    gap: 12,
   },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  headerTitle: {
+  title: {
     fontSize: 22,
-    fontWeight: "700" as const,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Amiri_700Bold",
   },
-  bookmarkBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
+  bookmarkChip: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 20,
   },
-  bookmarkBtnText: {
+  bookmarkChipText: {
     fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Cairo_600SemiBold",
   },
-  searchBox: {
+  searchContainer: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 9,
     gap: 8,
   },
+  searchIcon: { fontSize: 14 },
   searchInput: {
     flex: 1,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Cairo_400Regular",
     padding: 0,
   },
-  surahRow: {
+  clearBtn: { fontSize: 14, paddingHorizontal: 4 },
+  row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 10,
   },
-  surahNumber: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+  rowLeft: {},
+  numberBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
-  surahNumberText: {
+  numberText: {
+    fontFamily: "Cairo_700Bold",
     fontSize: 13,
-    fontFamily: "Inter_700Bold",
   },
-  surahInfo: {
-    flex: 1,
-    gap: 3,
-    alignItems: "flex-end",
+  rowCenter: { flex: 1, alignItems: "flex-end", gap: 3 },
+  surahName: {
+    fontFamily: "Amiri_700Bold",
+    fontSize: 18,
+    textAlign: "right",
   },
-  surahNameRow: {
+  metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "flex-end",
+    gap: 6,
   },
-  surahNameAr: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    textAlign: "right",
+  metaText: {
+    fontFamily: "Cairo_400Regular",
+    fontSize: 11,
   },
-  surahNameEn: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
+  metaDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    opacity: 0.5,
   },
-  surahMeta: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    textAlign: "right",
-  },
-  surahRight: {
+  rowRight: { alignItems: "center", gap: 4 },
+  pageBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    minWidth: 36,
     alignItems: "center",
-    gap: 4,
   },
-  pageNumber: {
+  pageNum: {
+    fontFamily: "Cairo_600SemiBold",
     fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
+  },
+  bmDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
 });

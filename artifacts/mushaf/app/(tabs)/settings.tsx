@@ -1,11 +1,12 @@
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 import { TOTAL_PAGES } from "@/data/surahs";
-import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React, { useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useState, useRef } from "react";
 import {
   Alert,
+  Animated,
   Modal,
   Platform,
   ScrollView,
@@ -18,7 +19,17 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-interface SliderProps {
+function GradientSlider({
+  value,
+  min,
+  max,
+  step,
+  onChange,
+  colors,
+  label,
+  displayValue,
+  icon,
+}: {
   value: number;
   min: number;
   max: number;
@@ -27,61 +38,59 @@ interface SliderProps {
   colors: ReturnType<typeof useColors>;
   label: string;
   displayValue: string;
-}
-
-function SimpleSlider({ value, min, max, step, onChange, colors, label, displayValue }: SliderProps) {
+  icon: string;
+}) {
   const steps = Math.round((max - min) / step);
   const currentStep = Math.round((value - min) / step);
+  const pct = currentStep / steps;
 
   return (
-    <View style={sliderStyles.container}>
-      <View style={sliderStyles.labelRow}>
-        <Text style={[sliderStyles.label, { color: colors.foreground }]}>{label}</Text>
-        <Text style={[sliderStyles.value, { color: colors.primary }]}>{displayValue}</Text>
+    <View style={gs.container}>
+      <View style={gs.topRow}>
+        <Text style={[gs.icon]}>{icon}</Text>
+        <Text style={[gs.label, { color: colors.foreground }]}>{label}</Text>
+        <View style={[gs.pill, { backgroundColor: colors.primary + "20", borderColor: colors.primary + "40" }]}>
+          <Text style={[gs.val, { color: colors.primary }]}>{displayValue}</Text>
+        </View>
       </View>
-      <View style={sliderStyles.track}>
-        {Array.from({ length: steps + 1 }, (_, i) => (
-          <TouchableOpacity
-            key={i}
-            style={[
-              sliderStyles.dot,
-              {
-                backgroundColor: i <= currentStep ? colors.primary : colors.border,
-                width: i === currentStep ? 16 : 10,
-                height: i === currentStep ? 16 : 10,
-                borderRadius: 8,
-              },
-            ]}
-            onPress={() => {
-              const newVal = min + i * step;
-              Haptics.selectionAsync();
-              onChange(Math.min(max, Math.max(min, newVal)));
-            }}
+      <View style={gs.trackRow}>
+        <TouchableOpacity
+          style={[gs.stepBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+          onPress={() => { onChange(Math.max(min, value - step)); Haptics.selectionAsync(); }}
+        >
+          <Text style={{ color: colors.primary, fontSize: 16, fontFamily: "Cairo_700Bold" }}>−</Text>
+        </TouchableOpacity>
+        <View style={[gs.track, { backgroundColor: colors.border }]}>
+          <LinearGradient
+            colors={[colors.accent, colors.primary]}
+            style={[gs.fill, { width: `${pct * 100}%` }]}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
           />
-        ))}
-      </View>
-      <View style={sliderStyles.minMax}>
-        <Text style={[sliderStyles.minMaxText, { color: colors.mutedForeground }]}>{min}</Text>
-        <Text style={[sliderStyles.minMaxText, { color: colors.mutedForeground }]}>{max}</Text>
+          <View style={[gs.thumb, { left: `${pct * 100}%`, backgroundColor: colors.primary, borderColor: colors.primaryForeground }]} />
+        </View>
+        <TouchableOpacity
+          style={[gs.stepBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+          onPress={() => { onChange(Math.min(max, value + step)); Haptics.selectionAsync(); }}
+        >
+          <Text style={{ color: colors.primary, fontSize: 16, fontFamily: "Cairo_700Bold" }}>+</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-const sliderStyles = StyleSheet.create({
-  container: { gap: 8 },
-  labelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  label: { fontSize: 15, fontFamily: "Inter_500Medium" },
-  value: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  track: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-  },
-  dot: {},
-  minMax: { flexDirection: "row", justifyContent: "space-between" },
-  minMaxText: { fontSize: 11, fontFamily: "Inter_400Regular" },
+const gs = StyleSheet.create({
+  container: { gap: 10, paddingVertical: 2 },
+  topRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  icon: { fontSize: 18 },
+  label: { flex: 1, fontFamily: "Cairo_600SemiBold", fontSize: 14 },
+  pill: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
+  val: { fontFamily: "Cairo_700Bold", fontSize: 13 },
+  trackRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  stepBtn: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  track: { flex: 1, height: 6, borderRadius: 3, position: "relative", overflow: "visible" },
+  fill: { position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: 3 },
+  thumb: { position: "absolute", top: -5, width: 16, height: 16, borderRadius: 8, borderWidth: 2, marginLeft: -8 },
 });
 
 export default function SettingsScreen() {
@@ -98,9 +107,10 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const [showKhatmaModal, setShowKhatmaModal] = useState(false);
   const [khatmaDays, setKhatmaDays] = useState("30");
+  const cancelScale = useRef(new Animated.Value(1)).current;
 
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const tabBarHeight = Platform.OS === "web" ? 84 : 60;
+  const topPad = Platform.OS === "web" ? 24 : insets.top;
+  const tabBarH = Platform.OS === "web" ? 84 : 68;
 
   const pagesPerDay = khatmaPlan ? khatmaPlan.pagesPerDay : 0;
   const khatmaProgress = khatmaPlan
@@ -113,163 +123,200 @@ export default function SettingsScreen() {
       Alert.alert("خطأ", "أدخل عدد أيام بين 1 و 365");
       return;
     }
-    const ppd = Math.ceil(TOTAL_PAGES / days);
     setKhatmaPlan({
       days,
-      pagesPerDay: ppd,
+      pagesPerDay: Math.ceil(TOTAL_PAGES / days),
       startDate: new Date().toISOString(),
     });
     setShowKhatmaModal(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  const SectionHeader = ({ title }: { title: string }) => (
-    <Text style={[styles.sectionHeader, { color: colors.primary }]}>{title}</Text>
-  );
+  const handleCancelKhatma = () => {
+    Animated.sequence([
+      Animated.timing(cancelScale, { toValue: 0.95, duration: 100, useNativeDriver: true }),
+      Animated.timing(cancelScale, { toValue: 1, duration: 100, useNativeDriver: true }),
+    ]).start();
+    Alert.alert(
+      "إلغاء خطة الختمة",
+      "هل أنت متأكد من إلغاء خطة الختمة؟ سيتم حذف كل التقدم.",
+      [
+        { text: "لا، رجوع", style: "cancel" },
+        {
+          text: "نعم، إلغاء الختمة",
+          style: "destructive",
+          onPress: () => {
+            setKhatmaPlan(null);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          },
+        },
+      ]
+    );
+  };
 
-  const Row = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <View style={[styles.row, { borderBottomColor: colors.border }]}>
-      <Text style={[styles.rowLabel, { color: colors.foreground }]}>{label}</Text>
-      {children}
-    </View>
+  const SectionLabel = ({ label }: { label: string }) => (
+    <Text style={[styles.sectionLabel, { color: colors.primary }]}>{label}</Text>
   );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.header,
-          { backgroundColor: colors.card, borderBottomColor: colors.border, paddingTop: topPad + 12 },
-        ]}
+      <LinearGradient
+        colors={[colors.card, colors.background]}
+        style={[styles.header, { paddingTop: topPad + 12 }]}
       >
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>الخصائص</Text>
+        <Text style={[styles.pageTitle, { color: colors.foreground }]}>الخصائص</Text>
         {userName && (
-          <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
-            أهلاً، {userName}
-          </Text>
+          <Text style={[styles.pageSub, { color: colors.mutedForeground }]}>مرحباً، {userName}</Text>
         )}
-      </View>
+      </LinearGradient>
 
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: tabBarHeight + insets.bottom + 20, gap: 8 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: tabBarH + insets.bottom + 20, gap: 12 }}
         showsVerticalScrollIndicator={false}
       >
+        <SectionLabel label="المظهر والألوان" />
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <SectionHeader title="المظهر" />
-          <Row label="الوضع الليلي">
+          <View style={styles.switchRow}>
+            <View style={styles.switchLabel}>
+              <Text style={styles.switchIcon}>🌙</Text>
+              <Text style={[styles.switchText, { color: colors.foreground }]}>الوضع الليلي</Text>
+            </View>
             <Switch
               value={isDark}
-              onValueChange={(v) => {
-                setIsDark(v);
-                Haptics.selectionAsync();
-              }}
+              onValueChange={(v) => { setIsDark(v); Haptics.selectionAsync(); }}
               trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={isDark ? colors.primaryForeground : colors.card}
-            />
-          </Row>
-        </View>
-
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <SectionHeader title="إعدادات العرض" />
-          <View style={styles.sliderSection}>
-            <SimpleSlider
-              label="حجم الخط"
-              value={fontSize}
-              min={0.8}
-              max={1.6}
-              step={0.1}
-              onChange={setFontSize}
-              colors={colors}
-              displayValue={`${Math.round(fontSize * 100)}%`}
+              thumbColor={isDark ? colors.primaryForeground : "#fff"}
+              ios_backgroundColor={colors.border}
             />
           </View>
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <View style={styles.sliderSection}>
-            <SimpleSlider
-              label="الإضاءة"
-              value={brightness}
-              min={0.3}
-              max={1.0}
-              step={0.1}
-              onChange={setBrightness}
-              colors={colors}
-              displayValue={`${Math.round(brightness * 100)}%`}
-            />
-          </View>
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <View style={styles.sliderSection}>
-            <SimpleSlider
-              label="الشفافية"
-              value={opacity}
-              min={0.5}
-              max={1.0}
-              step={0.1}
-              onChange={setOpacity}
-              colors={colors}
-              displayValue={`${Math.round(opacity * 100)}%`}
-            />
+          <View style={[styles.cardDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.previewRow}>
+            <View style={[styles.colorSwatch, { backgroundColor: "#F5EDD6", borderColor: isDark ? "transparent" : colors.primary, borderWidth: isDark ? 0 : 2 }]}>
+              <Text style={styles.swatchLabel}>فاتح</Text>
+            </View>
+            <View style={[styles.colorSwatch, { backgroundColor: "#1A1208", borderColor: isDark ? colors.primary : "transparent", borderWidth: isDark ? 2 : 0 }]}>
+              <Text style={[styles.swatchLabel, { color: "#E8D5A3" }]}>غامق</Text>
+            </View>
           </View>
         </View>
 
+        <SectionLabel label="إعدادات العرض" />
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <SectionHeader title="خطة الختمة (اختياري)" />
+          <GradientSlider
+            label="حجم الخط"
+            icon="Aa"
+            value={fontSize}
+            min={0.8}
+            max={1.6}
+            step={0.1}
+            onChange={setFontSize}
+            colors={colors}
+            displayValue={`${Math.round(fontSize * 100)}%`}
+          />
+          <View style={[styles.cardDivider, { backgroundColor: colors.border }]} />
+          <GradientSlider
+            label="الإضاءة"
+            icon="☀️"
+            value={brightness}
+            min={0.3}
+            max={1.0}
+            step={0.1}
+            onChange={setBrightness}
+            colors={colors}
+            displayValue={`${Math.round(brightness * 100)}%`}
+          />
+          <View style={[styles.cardDivider, { backgroundColor: colors.border }]} />
+          <GradientSlider
+            label="شفافية التطبيق"
+            icon="🔆"
+            value={opacity}
+            min={0.5}
+            max={1.0}
+            step={0.1}
+            onChange={setOpacity}
+            colors={colors}
+            displayValue={`${Math.round(opacity * 100)}%`}
+          />
+        </View>
+
+        <SectionLabel label="خطة الختمة" />
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {khatmaPlan ? (
-            <View style={styles.khatmaInfo}>
-              <View style={[styles.khatmaBar, { backgroundColor: colors.border }]}>
-                <View
-                  style={[
-                    styles.khatmaProgress,
-                    { backgroundColor: colors.primary, width: `${khatmaProgress}%` },
-                  ]}
+            <View style={styles.khatmaSection}>
+              <View style={styles.khatmaStats}>
+                <View style={[styles.statBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <Text style={[styles.statNum, { color: colors.primary }]}>{pagesPerDay}</Text>
+                  <Text style={[styles.statLbl, { color: colors.mutedForeground }]}>صفحة / يوم</Text>
+                </View>
+                <View style={[styles.statBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <Text style={[styles.statNum, { color: colors.primary }]}>{khatmaPlan.days}</Text>
+                  <Text style={[styles.statLbl, { color: colors.mutedForeground }]}>يوم</Text>
+                </View>
+                <View style={[styles.statBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <Text style={[styles.statNum, { color: colors.primary }]}>{khatmaProgress}%</Text>
+                  <Text style={[styles.statLbl, { color: colors.mutedForeground }]}>تقدم</Text>
+                </View>
+              </View>
+
+              <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
+                <LinearGradient
+                  colors={[colors.accent, colors.primary]}
+                  style={[styles.progressFill, { width: `${khatmaProgress}%` }]}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 />
               </View>
-              <Text style={[styles.khatmaText, { color: colors.foreground }]}>
-                التقدم: {khatmaProgress}% ({khatmaPagesRead} / {TOTAL_PAGES} صفحة)
+
+              <Text style={[styles.khatmaDetail, { color: colors.mutedForeground }]}>
+                قرأت {khatmaPagesRead} صفحة من {TOTAL_PAGES} • أنت في الصفحة {currentPage}
               </Text>
-              <Text style={[styles.khatmaSubtext, { color: colors.mutedForeground }]}>
-                {pagesPerDay} صفحة يومياً لإتمام الختمة في {khatmaPlan.days} يوم
-              </Text>
-              <Text style={[styles.khatmaSubtext, { color: colors.mutedForeground }]}>
-                أنت الآن في الصفحة {currentPage}
-              </Text>
-              <TouchableOpacity
-                style={[styles.cancelBtn, { borderColor: colors.destructive }]}
-                onPress={() => {
-                  Alert.alert("إلغاء الختمة", "هل تريد إلغاء خطة الختمة؟", [
-                    { text: "لا", style: "cancel" },
-                    { text: "نعم", style: "destructive", onPress: () => setKhatmaPlan(null) },
-                  ]);
-                }}
-              >
-                <Text style={[styles.cancelBtnText, { color: colors.destructive }]}>إلغاء الختمة</Text>
-              </TouchableOpacity>
+
+              <Animated.View style={{ transform: [{ scale: cancelScale }] }}>
+                <TouchableOpacity
+                  style={[styles.cancelKhatmaBtn, { borderColor: colors.destructive }]}
+                  onPress={handleCancelKhatma}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.cancelKhatmaText, { color: colors.destructive }]}>
+                    إلغاء خطة الختمة
+                  </Text>
+                </TouchableOpacity>
+              </Animated.View>
             </View>
           ) : (
-            <View style={styles.khatmaEmpty}>
-              <Text style={[styles.khatmaEmptyText, { color: colors.mutedForeground }]}>
-                لم يتم تحديد خطة ختمة بعد
+            <View style={styles.noKhatma}>
+              <Text style={[styles.noKhatmaText, { color: colors.mutedForeground }]}>
+                حدد خطة لختم القرآن الكريم في عدد أيام تختاره
               </Text>
               <TouchableOpacity
-                style={[styles.khatmaBtn, { backgroundColor: colors.primary }]}
+                style={styles.setKhatmaBtn}
                 onPress={() => setShowKhatmaModal(true)}
-                activeOpacity={0.8}
+                activeOpacity={0.85}
               >
-                <Feather name="target" size={16} color={colors.primaryForeground} />
-                <Text style={[styles.khatmaBtnText, { color: colors.primaryForeground }]}>
-                  حدد خطة ختمة
-                </Text>
+                <LinearGradient
+                  colors={[colors.accent, colors.primary]}
+                  style={styles.setKhatmaBtnGrad}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                >
+                  <Text style={[styles.setKhatmaBtnText, { color: colors.primaryForeground }]}>
+                    تحديد خطة الختمة
+                  </Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           )}
         </View>
 
+        <SectionLabel label="عن التطبيق" />
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <SectionHeader title="عن التطبيق" />
           <View style={styles.aboutSection}>
-            <Text style={[styles.aboutText, { color: colors.foreground }]}>المصحف المثمن</Text>
+            <Text style={[styles.aboutTitle, { color: colors.foreground }]}>المصحف المثمن</Text>
             <Text style={[styles.aboutSub, { color: colors.mutedForeground }]}>
-              تطبيق للقرآن الكريم يعمل بالكامل دون إنترنت
+              برواية ورش عن نافع • الإصدار 1.0
             </Text>
+            <Text style={[styles.aboutDesc, { color: colors.mutedForeground }]}>
+              تطبيق للقرآن الكريم يعمل بالكامل دون اتصال بالإنترنت
+            </Text>
+            <View style={[styles.aboutDivider, { backgroundColor: colors.border }]} />
             <Text style={[styles.madeBy, { color: colors.mutedForeground }]}>
               made by Seif kamel
             </Text>
@@ -280,45 +327,53 @@ export default function SettingsScreen() {
       <Modal
         visible={showKhatmaModal}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setShowKhatmaModal(false)}
       >
-        <View style={[styles.modalOverlay, { backgroundColor: colors.overlayBackground }]}>
+        <View style={[styles.modalOverlay, { backgroundColor: "rgba(0,0,0,0.55)" }]}>
           <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>خطة الختمة</Text>
+            <LinearGradient
+              colors={[colors.accent + "30", "transparent"]}
+              style={styles.modalTopGlow}
+            />
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>خطة ختمة القرآن</Text>
             <Text style={[styles.modalSub, { color: colors.mutedForeground }]}>
               كم يوماً تريد لإتمام ختمة القرآن الكريم؟
             </Text>
             <TextInput
-              style={[
-                styles.modalInput,
-                { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground },
-              ]}
-              placeholder="عدد الأيام (مثال: 30)"
+              style={[styles.modalInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+              placeholder="عدد الأيام"
               placeholderTextColor={colors.mutedForeground}
               value={khatmaDays}
               onChangeText={setKhatmaDays}
               keyboardType="number-pad"
               textAlign="center"
             />
-            {khatmaDays && !isNaN(parseInt(khatmaDays)) && (
-              <Text style={[styles.modalCalc, { color: colors.primary }]}>
-                ستقرأ {Math.ceil(TOTAL_PAGES / parseInt(khatmaDays))} صفحة يومياً
-              </Text>
+            {khatmaDays && !isNaN(parseInt(khatmaDays)) && parseInt(khatmaDays) > 0 && (
+              <View style={[styles.calcBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Text style={[styles.calcText, { color: colors.primary }]}>
+                  ستقرأ {Math.ceil(TOTAL_PAGES / parseInt(khatmaDays))} صفحة يومياً
+                </Text>
+                <Text style={[styles.calcSub, { color: colors.mutedForeground }]}>
+                  {TOTAL_PAGES} صفحة ÷ {parseInt(khatmaDays)} يوم
+                </Text>
+              </View>
             )}
             <View style={styles.modalBtns}>
               <TouchableOpacity
-                style={[styles.modalCancelBtn, { borderColor: colors.border }]}
+                style={[styles.modalCancel, { borderColor: colors.border }]}
                 onPress={() => setShowKhatmaModal(false)}
               >
                 <Text style={[styles.modalCancelText, { color: colors.mutedForeground }]}>إلغاء</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalConfirmBtn, { backgroundColor: colors.primary }]}
-                onPress={handleSetKhatma}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.modalConfirmText, { color: colors.primaryForeground }]}>تأكيد</Text>
+              <TouchableOpacity style={styles.modalConfirm} onPress={handleSetKhatma} activeOpacity={0.85}>
+                <LinearGradient
+                  colors={[colors.accent, colors.primary]}
+                  style={styles.modalConfirmGrad}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                >
+                  <Text style={[styles.modalConfirmText, { color: colors.primaryForeground }]}>تأكيد الخطة</Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           </View>
@@ -332,196 +387,171 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
+    paddingBottom: 14,
     gap: 4,
   },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: "700" as const,
-    fontFamily: "Inter_700Bold",
+  pageTitle: {
+    fontSize: 24,
+    fontFamily: "Amiri_700Bold",
     textAlign: "right",
   },
-  headerSubtitle: {
+  pageSub: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Cairo_400Regular",
     textAlign: "right",
   },
-  card: {
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 8,
-    overflow: "hidden",
-  },
-  sectionHeader: {
+  sectionLabel: {
     fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 8,
-    textTransform: "uppercase",
+    fontFamily: "Cairo_700Bold",
+    textAlign: "right",
     letterSpacing: 0.5,
-    textAlign: "right",
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  rowLabel: {
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-  },
-  sliderSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    marginHorizontal: 16,
-  },
-  khatmaInfo: {
-    padding: 16,
-    gap: 10,
-  },
-  khatmaBar: {
-    height: 8,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  khatmaProgress: {
-    height: "100%",
-    borderRadius: 4,
-  },
-  khatmaText: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    textAlign: "right",
-  },
-  khatmaSubtext: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    textAlign: "right",
-  },
-  cancelBtn: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingVertical: 8,
-    alignItems: "center",
     marginTop: 4,
   },
-  cancelBtnText: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-  },
-  khatmaEmpty: {
+  card: {
+    borderRadius: 16,
+    borderWidth: 1,
     padding: 16,
+    gap: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+    marginBottom: 4,
+  },
+  cardDivider: {
+    height: StyleSheet.hairlineWidth,
+  },
+  switchRow: {
+    flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    justifyContent: "space-between",
   },
-  khatmaEmptyText: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
-  },
-  khatmaBtn: {
+  switchLabel: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
   },
-  khatmaBtnText: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
+  switchIcon: { fontSize: 20 },
+  switchText: {
+    fontSize: 15,
+    fontFamily: "Cairo_600SemiBold",
   },
-  aboutSection: {
-    padding: 16,
-    alignItems: "center",
-    gap: 6,
-  },
-  aboutText: {
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
-    textAlign: "center",
-  },
-  aboutSub: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
-  },
-  madeBy: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
-    marginTop: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  modalCard: {
-    width: "100%",
-    maxWidth: 360,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 24,
-    gap: 12,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontFamily: "Inter_700Bold",
-    textAlign: "center",
-  },
-  modalSub: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    fontSize: 18,
-    fontFamily: "Inter_500Medium",
-    textAlign: "center",
-  },
-  modalCalc: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    textAlign: "center",
-  },
-  modalBtns: {
+  previewRow: {
     flexDirection: "row",
     gap: 10,
-    marginTop: 4,
   },
-  modalCancelBtn: {
+  colorSwatch: {
+    flex: 1,
+    height: 44,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  swatchLabel: {
+    fontFamily: "Cairo_600SemiBold",
+    fontSize: 13,
+    color: "#8B6914",
+  },
+  khatmaSection: { gap: 12 },
+  khatmaStats: { flexDirection: "row", gap: 8 },
+  statBox: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    gap: 2,
+  },
+  statNum: { fontFamily: "Cairo_700Bold", fontSize: 18 },
+  statLbl: { fontFamily: "Cairo_400Regular", fontSize: 11 },
+  progressTrack: {
+    height: 10,
+    borderRadius: 5,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 5,
+  },
+  khatmaDetail: {
+    fontFamily: "Cairo_400Regular",
+    fontSize: 12,
+    textAlign: "right",
+  },
+  cancelKhatmaBtn: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: "center",
+  },
+  cancelKhatmaText: {
+    fontFamily: "Cairo_700Bold",
+    fontSize: 14,
+  },
+  noKhatma: { gap: 12, alignItems: "center" },
+  noKhatmaText: {
+    fontFamily: "Cairo_400Regular",
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  setKhatmaBtn: { width: "100%", borderRadius: 12, overflow: "hidden" },
+  setKhatmaBtnGrad: { paddingVertical: 13, alignItems: "center" },
+  setKhatmaBtnText: { fontFamily: "Cairo_700Bold", fontSize: 15 },
+  aboutSection: { gap: 8, alignItems: "center" },
+  aboutTitle: { fontFamily: "Amiri_700Bold", fontSize: 18, textAlign: "center" },
+  aboutSub: { fontFamily: "Cairo_600SemiBold", fontSize: 12, textAlign: "center" },
+  aboutDesc: { fontFamily: "Cairo_400Regular", fontSize: 12, textAlign: "center", lineHeight: 20 },
+  aboutDivider: { width: 60, height: 1, borderRadius: 1, marginVertical: 4 },
+  madeBy: { fontFamily: "Cairo_400Regular", fontSize: 11, textAlign: "center", letterSpacing: 0.5 },
+  modalOverlay: { flex: 1, justifyContent: "flex-end" },
+  modalCard: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    padding: 24,
+    gap: 14,
+    overflow: "hidden",
+  },
+  modalTopGlow: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 60,
+  },
+  modalTitle: { fontSize: 20, fontFamily: "Amiri_700Bold", textAlign: "center" },
+  modalSub: { fontSize: 13, fontFamily: "Cairo_400Regular", textAlign: "center" },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    fontSize: 22,
+    fontFamily: "Cairo_700Bold",
+  },
+  calcBox: {
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    alignItems: "center",
+    gap: 4,
+  },
+  calcText: { fontFamily: "Cairo_700Bold", fontSize: 15 },
+  calcSub: { fontFamily: "Cairo_400Regular", fontSize: 12 },
+  modalBtns: { flexDirection: "row", gap: 10 },
+  modalCancel: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: 8,
-    paddingVertical: 12,
+    borderRadius: 12,
+    paddingVertical: 13,
     alignItems: "center",
   },
-  modalCancelText: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-  },
-  modalConfirmBtn: {
-    flex: 1,
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  modalConfirmText: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-  },
+  modalCancelText: { fontFamily: "Cairo_600SemiBold", fontSize: 14 },
+  modalConfirm: { flex: 1, borderRadius: 12, overflow: "hidden" },
+  modalConfirmGrad: { paddingVertical: 13, alignItems: "center" },
+  modalConfirmText: { fontFamily: "Cairo_700Bold", fontSize: 14 },
 });

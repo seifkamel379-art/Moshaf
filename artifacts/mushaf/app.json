@@ -4,14 +4,14 @@
     "slug": "mushaf",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logo.png",
     "scheme": "mushaf",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/icon.png",
+      "image": "./assets/images/logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#F5EDD6"
+      "backgroundColor": "#F0E6C8"
     },
     "ios": {
       "supportsTablet": false,
@@ -20,12 +20,12 @@
     "android": {
       "package": "com.seifkamel.mushaf",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#F5EDD6"
+        "foregroundImage": "./assets/images/logo.png",
+        "backgroundColor": "#F0E6C8"
       }
     },
     "web": {
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/logo.png"
     },
     "plugins": [
       [
