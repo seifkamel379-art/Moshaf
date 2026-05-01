@@ -11,17 +11,17 @@ export interface Surah {
 
 // Page numbers calibrated to this specific mushaf:
 // مصحف الشاذلي رحمه الله برواية ورش عن نافع — 482 pages
-// Calibrated from visual inspection of: Al-Baqarah p1, Al-Imran p43,
-// Al-Araf p120, Yunus p168, As-Saf p440, Al-Inshiqaq p470, Al-Fajr p474, An-Nas p482
+// Verified via pixel-level scan of all 482 page images (Python/PIL separator-line detection)
+// Confirmed mid-page Surah starts: Al-Imran p39, Al-Anfal p140
 export const SURAHS: Surah[] = [
   { number: 1,   nameAr: "الفاتحة",      nameEn: "Al-Fatihah",      verses: 7,   page: 1,   juz: 1,  hizb: 1,  type: "meccan" },
   { number: 2,   nameAr: "البقرة",        nameEn: "Al-Baqarah",      verses: 286, page: 1,   juz: 1,  hizb: 1,  type: "medinan" },
-  { number: 3,   nameAr: "آل عمران",      nameEn: "Ali Imran",       verses: 200, page: 43,  juz: 3,  hizb: 6,  type: "medinan" },
+  { number: 3,   nameAr: "آل عمران",      nameEn: "Ali Imran",       verses: 200, page: 39,  juz: 3,  hizb: 6,  type: "medinan" },
   { number: 4,   nameAr: "النساء",        nameEn: "An-Nisa",         verses: 176, page: 64,  juz: 4,  hizb: 8,  type: "medinan" },
   { number: 5,   nameAr: "المائدة",       nameEn: "Al-Maidah",       verses: 120, page: 86,  juz: 6,  hizb: 11, type: "medinan" },
   { number: 6,   nameAr: "الأنعام",       nameEn: "Al-Anam",         verses: 165, page: 102, juz: 7,  hizb: 14, type: "meccan" },
   { number: 7,   nameAr: "الأعراف",       nameEn: "Al-Araf",         verses: 206, page: 120, juz: 8,  hizb: 15, type: "meccan" },
-  { number: 8,   nameAr: "الأنفال",       nameEn: "Al-Anfal",        verses: 75,  page: 142, juz: 9,  hizb: 18, type: "medinan" },
+  { number: 8,   nameAr: "الأنفال",       nameEn: "Al-Anfal",        verses: 75,  page: 140, juz: 9,  hizb: 18, type: "medinan" },
   { number: 9,   nameAr: "التوبة",        nameEn: "At-Tawbah",       verses: 129, page: 150, juz: 10, hizb: 19, type: "medinan" },
   { number: 10,  nameAr: "يونس",          nameEn: "Yunus",           verses: 109, page: 168, juz: 11, hizb: 21, type: "meccan" },
   { number: 11,  nameAr: "هود",           nameEn: "Hud",             verses: 123, page: 178, juz: 11, hizb: 22, type: "meccan" },
