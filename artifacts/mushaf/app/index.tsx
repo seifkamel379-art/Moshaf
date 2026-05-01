@@ -60,13 +60,11 @@ export default function WelcomeScreen() {
       />
       <View style={[styles.inner, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 20 }]}>
         <View style={styles.logoWrapper}>
-          <View style={[styles.logoShadow, { shadowColor: colors.primary }]}>
-            <Image
-              source={require("@/assets/images/logo.png")}
-              style={styles.logo}
-              resizeMode="cover"
-            />
-          </View>
+          <Image
+            source={require("@/assets/images/logo_nobg.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
 
         <View style={styles.titleBlock}>
@@ -155,17 +153,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 4,
   },
-  logoShadow: {
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 10,
-    borderRadius: 45,
-  },
   logo: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: 110,
+    height: 110,
   },
   titleBlock: { alignItems: "center", gap: 4 },
   appName: {

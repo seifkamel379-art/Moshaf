@@ -11,7 +11,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -222,37 +221,40 @@ export default function SettingsScreen() {
       >
         <SectionLabel label="المظهر" />
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.switchRow}>
-            <Text style={[styles.switchText, { color: colors.foreground }]}>الوضع الليلي</Text>
-            <Switch
-              value={isDark}
-              onValueChange={(v) => { setIsDark(v); Haptics.selectionAsync(); }}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={isDark ? colors.primaryForeground : "#fff"}
-              ios_backgroundColor={colors.border}
-            />
-          </View>
-          <View style={[styles.cardDivider, { backgroundColor: colors.border }]} />
           <View style={styles.swatchRow}>
             <TouchableOpacity
               style={[
                 styles.swatch,
-                { backgroundColor: "#F5EDD6" },
-                !isDark && { borderColor: colors.primary, borderWidth: 2.5 },
+                { backgroundColor: "#F5EDD6", borderColor: !isDark ? "#8B6914" : "transparent" },
+                !isDark && { borderWidth: 2.5 },
               ]}
-              onPress={() => setIsDark(false)}
+              onPress={() => { setIsDark(false); Haptics.selectionAsync(); }}
+              activeOpacity={0.8}
             >
+              <Text style={{ fontSize: 18, marginBottom: 4 }}>☀️</Text>
               <Text style={[styles.swatchLabel, { color: "#7A6440" }]}>فاتح</Text>
+              {!isDark && (
+                <View style={[styles.swatchCheck, { backgroundColor: "#8B6914" }]}>
+                  <Text style={styles.swatchCheckText}>✓</Text>
+                </View>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
               style={[
                 styles.swatch,
-                { backgroundColor: "#1A1208" },
-                isDark && { borderColor: colors.primary, borderWidth: 2.5 },
+                { backgroundColor: "#1A1208", borderColor: isDark ? "#D4A84B" : "transparent" },
+                isDark && { borderWidth: 2.5 },
               ]}
-              onPress={() => setIsDark(true)}
+              onPress={() => { setIsDark(true); Haptics.selectionAsync(); }}
+              activeOpacity={0.8}
             >
+              <Text style={{ fontSize: 18, marginBottom: 4 }}>🌙</Text>
               <Text style={[styles.swatchLabel, { color: "#D4A84B" }]}>غامق</Text>
+              {isDark && (
+                <View style={[styles.swatchCheck, { backgroundColor: "#D4A84B" }]}>
+                  <Text style={styles.swatchCheckText}>✓</Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -500,16 +502,34 @@ const styles = StyleSheet.create({
   swatchRow: { flexDirection: "row", gap: 10 },
   swatch: {
     flex: 1,
-    height: 46,
-    borderRadius: 10,
+    height: 80,
+    borderRadius: 14,
     borderWidth: 1.5,
     borderColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
+    gap: 2,
+    position: "relative",
+    overflow: "hidden",
   },
   swatchLabel: {
     fontFamily: "Cairo_700Bold",
     fontSize: 13,
+  },
+  swatchCheck: {
+    position: "absolute",
+    top: 6,
+    left: 8,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  swatchCheckText: {
+    fontSize: 11,
+    color: "#fff",
+    fontFamily: "Cairo_700Bold",
   },
   khatmaSection: { gap: 14 },
   khatmaStats: { flexDirection: "row", gap: 8 },

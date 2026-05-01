@@ -35,7 +35,7 @@ function CustomSplash({ onFinish }: { onFinish: () => void }) {
   return (
     <View style={splashStyles.container}>
       <Animated.View style={[splashStyles.inner, { opacity, transform: [{ scale }] }]}>
-        <Image source={require("@/assets/images/logo.png")} style={splashStyles.logo} resizeMode="contain" />
+        <Image source={require("@/assets/images/logo_nobg.png")} style={splashStyles.logo} resizeMode="contain" />
         <Text style={splashStyles.title}>المصحف المثمن</Text>
         <Text style={splashStyles.sub}>بسم الله الرحمن الرحيم</Text>
       </Animated.View>
@@ -52,7 +52,7 @@ const splashStyles = StyleSheet.create({
     justifyContent: "center",
   },
   inner: { alignItems: "center", gap: 14 },
-  logo: { width: 160, height: 160, borderRadius: 80 },
+  logo: { width: 160, height: 160 },
   title: {
     fontSize: 28,
     fontFamily: "Amiri_700Bold",

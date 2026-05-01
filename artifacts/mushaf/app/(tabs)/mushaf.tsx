@@ -23,6 +23,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width: SW, height: SH } = Dimensions.get("window");
 
+const MUSHAF_BG = "#F5EDD6";
+
 function BookmarkRibbon({ colors }: { colors: ReturnType<typeof useColors> }) {
   return (
     <View style={[ribbon.wrap, { backgroundColor: colors.primary }]}>
@@ -59,6 +61,44 @@ const ribbon = StyleSheet.create({
   },
 });
 
+function ZoomIcon({ color }: { color: string }) {
+  return (
+    <View style={zoomIconStyle.wrap}>
+      <View style={[zoomIconStyle.circle, { borderColor: color }]} />
+      <View style={[zoomIconStyle.handle, { backgroundColor: color }]} />
+    </View>
+  );
+}
+
+const zoomIconStyle = StyleSheet.create({
+  wrap: {
+    width: 22,
+    height: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  circle: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2.5,
+  },
+  handle: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 8,
+    height: 2.5,
+    borderRadius: 2,
+    transform: [{ rotate: "45deg" }],
+    marginBottom: 1,
+    marginRight: 1,
+  },
+});
+
 function MushafPage({
   pageNumber,
   isDark,
@@ -87,8 +127,6 @@ function MushafPage({
     lastTap.current = now;
   };
 
-  const bgColor = isDark ? "#1A1208" : "#F5EDD6";
-
   const dynamicImageStyle: any = {
     opacity: brightness,
     transform: [{ scale: zoom }],
@@ -108,7 +146,7 @@ function MushafPage({
     <TouchableOpacity
       activeOpacity={1}
       onPress={handlePress}
-      style={[styles.page, { backgroundColor: bgColor }]}
+      style={[styles.page, { backgroundColor: MUSHAF_BG }]}
     >
       {isBookmarked && <BookmarkRibbon colors={colors} />}
 
@@ -238,6 +276,21 @@ export default function MushafScreen() {
     [isBookmarked, removeBookmark, addBookmark]
   );
 
+  const handleBookmarkPress = useCallback(() => {
+    if (isBookmarked(currentPage)) {
+      removeBookmark(currentPage);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    } else {
+      const arr = getSurahsForPage(currentPage);
+      addBookmark({
+        page: currentPage,
+        surahName: arr.length > 0 ? arr[0].nameAr : `صفحة ${currentPage}`,
+        verseHint: `الجزء ${getJuzForPage(currentPage)}`,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [currentPage, isBookmarked, removeBookmark, addBookmark]);
+
   const pages = Array.from({ length: TOTAL_PAGES }, (_, i) => i + 1);
   const tabBarH = Platform.OS === "web" ? 84 : 68;
 
@@ -268,6 +321,8 @@ export default function MushafScreen() {
   };
 
   const bottomBase = tabBarH + 12 + insets.bottom;
+  const topBase = (Platform.OS === "web" ? 16 : insets.top + 8);
+  const bookmarked = isBookmarked(currentPage);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -302,6 +357,41 @@ export default function MushafScreen() {
         initialNumToRender={2}
         removeClippedSubviews={Platform.OS !== "web"}
       />
+
+      {/* Bookmark button — top right */}
+      <TouchableOpacity
+        style={[
+          styles.bookmarkBtn,
+          {
+            backgroundColor: bookmarked ? colors.primary : colors.card,
+            borderColor: bookmarked ? colors.primary : colors.border,
+            top: topBase,
+            right: 16,
+          },
+        ]}
+        onPress={handleBookmarkPress}
+        activeOpacity={0.8}
+      >
+        <View style={styles.bookmarkIconWrap}>
+          <View
+            style={[
+              styles.bookmarkIconBody,
+              {
+                borderColor: bookmarked ? colors.primaryForeground : colors.primary,
+                backgroundColor: "transparent",
+              },
+            ]}
+          />
+          <View
+            style={[
+              styles.bookmarkIconTip,
+              {
+                borderTopColor: bookmarked ? colors.primaryForeground : colors.primary,
+              },
+            ]}
+          />
+        </View>
+      </TouchableOpacity>
 
       <Animated.View
         style={[
@@ -371,23 +461,37 @@ export default function MushafScreen() {
           ]}
         >
           <TouchableOpacity
-            style={[styles.zoomBtn, { borderColor: colors.border }]}
             onPress={() => handleZoomChange(0.1)}
             activeOpacity={0.75}
           >
-            <Text style={[styles.zoomBtnText, { color: colors.primary }]}>+</Text>
+            <LinearGradient
+              colors={[colors.accent, colors.primary]}
+              style={styles.zoomBtn3D}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+            >
+              <Text style={[styles.zoomBtnText3D, { color: colors.primaryForeground }]}>＋</Text>
+            </LinearGradient>
           </TouchableOpacity>
+
           <TouchableOpacity onPress={resetZoom} activeOpacity={0.75}>
             <Text style={[styles.zoomValue, { color: colors.foreground }]}>
               {Math.round(zoom * 100)}%
             </Text>
           </TouchableOpacity>
+
           <TouchableOpacity
-            style={[styles.zoomBtn, { borderColor: colors.border }]}
             onPress={() => handleZoomChange(-0.1)}
             activeOpacity={0.75}
           >
-            <Text style={[styles.zoomBtnText, { color: colors.primary }]}>−</Text>
+            <LinearGradient
+              colors={[colors.accent, colors.primary]}
+              style={styles.zoomBtn3D}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+            >
+              <Text style={[styles.zoomBtnText3D, { color: colors.primaryForeground }]}>－</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </Animated.View>
       )}
@@ -397,9 +501,10 @@ export default function MushafScreen() {
           styles.zoomToggleBtn,
           {
             backgroundColor: zoom !== 1.0 ? colors.primary : colors.card,
-            borderColor: colors.border,
+            borderColor: zoom !== 1.0 ? colors.primary : colors.border,
             bottom: bottomBase + 58,
             right: 16,
+            shadowColor: colors.primary,
           },
         ]}
         onPress={() => {
@@ -417,14 +522,18 @@ export default function MushafScreen() {
         }}
         activeOpacity={0.8}
       >
-        <Text
-          style={[
-            styles.zoomToggleIcon,
-            { color: zoom !== 1.0 ? colors.primaryForeground : colors.primary },
-          ]}
-        >
-          {zoom !== 1.0 ? `${Math.round(zoom * 100)}%` : "🔍"}
-        </Text>
+        {zoom !== 1.0 ? (
+          <Text
+            style={[
+              styles.zoomToggleIcon,
+              { color: colors.primaryForeground },
+            ]}
+          >
+            {Math.round(zoom * 100)}%
+          </Text>
+        ) : (
+          <ZoomIcon color={colors.primary} />
+        )}
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -509,6 +618,42 @@ const styles = StyleSheet.create({
     width: SW,
     height: SH,
   },
+  bookmarkBtn: {
+    position: "absolute",
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 6,
+    zIndex: 20,
+  },
+  bookmarkIconWrap: {
+    alignItems: "center",
+    width: 14,
+    height: 18,
+  },
+  bookmarkIconBody: {
+    width: 14,
+    height: 14,
+    borderWidth: 2,
+    borderBottomWidth: 0,
+    borderRadius: 2,
+  },
+  bookmarkIconTip: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 7,
+    borderRightWidth: 7,
+    borderTopWidth: 6,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+  },
   floatingBar: {
     position: "absolute",
     left: 16,
@@ -552,9 +697,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     borderRadius: 16,
     borderWidth: 1,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     paddingVertical: 10,
-    gap: 6,
+    gap: 8,
     alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -563,18 +708,23 @@ const styles = StyleSheet.create({
     elevation: 8,
     zIndex: 30,
   },
-  zoomBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
+  zoomBtn3D: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  zoomBtnText: {
-    fontSize: 22,
+  zoomBtnText3D: {
+    fontSize: 20,
     fontFamily: "Cairo_700Bold",
-    lineHeight: 26,
+    lineHeight: 24,
+    textAlign: "center",
   },
   zoomValue: {
     fontSize: 13,
@@ -590,12 +740,11 @@ const styles = StyleSheet.create({
     borderRadius: 23,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
+    borderWidth: 1.5,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 6,
     zIndex: 10,
   },
   zoomToggleIcon: {
