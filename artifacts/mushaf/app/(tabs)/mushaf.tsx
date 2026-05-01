@@ -4,6 +4,7 @@ import { getHizbForPage, getJuzForPage, getSurahsForPage, TOTAL_PAGES } from "@/
 import MUSHAF_PAGES from "@/data/pages";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
+import { useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import {
   Animated,
@@ -65,6 +66,7 @@ function MushafPage({
   onDoublePress,
   isBookmarked,
   brightness,
+  zoom,
 }: {
   pageNumber: number;
   isDark: boolean;
@@ -72,6 +74,7 @@ function MushafPage({
   onDoublePress: (page: number) => void;
   isBookmarked: boolean;
   brightness: number;
+  zoom: number;
 }) {
   const lastTap = useRef(0);
   const src = MUSHAF_PAGES[pageNumber];
@@ -86,6 +89,21 @@ function MushafPage({
 
   const bgColor = isDark ? "#1A1208" : "#F5EDD6";
 
+  const dynamicImageStyle: any = {
+    opacity: brightness,
+    transform: [{ scale: zoom }],
+    ...(Platform.OS === "web"
+      ? isDark
+        ? {
+            filter: "invert(0.88) sepia(0.15) brightness(0.85)",
+            mixBlendMode: "multiply",
+          }
+        : { mixBlendMode: "multiply" }
+      : !isDark
+      ? { mixBlendMode: "multiply" }
+      : {}),
+  };
+
   return (
     <TouchableOpacity
       activeOpacity={1}
@@ -96,22 +114,16 @@ function MushafPage({
 
       <Image
         source={src}
-        style={[
-          styles.pageImage,
-          {
-            opacity: brightness,
-            tintColor: isDark ? undefined : undefined,
-          },
-        ]}
+        style={[styles.pageImage, dynamicImageStyle]}
         resizeMode="contain"
         fadeDuration={0}
       />
 
-      {isDark && (
+      {isDark && Platform.OS !== "web" && (
         <View
           style={[
             StyleSheet.absoluteFill,
-            { backgroundColor: "rgba(10,6,0,0.35)", pointerEvents: "none" },
+            { backgroundColor: "rgba(10,6,0,0.30)", pointerEvents: "none" },
           ]}
         />
       )}
@@ -135,12 +147,32 @@ export default function MushafScreen() {
   const flatListRef = useRef<FlatList>(null);
   const [showGoTo, setShowGoTo] = useState(false);
   const [goToInput, setGoToInput] = useState("");
+  const [zoom, setZoom] = useState(1.0);
+  const [showZoom, setShowZoom] = useState(false);
   const floatingAnim = useRef(new Animated.Value(0)).current;
+  const zoomAnim = useRef(new Animated.Value(0)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const zoomHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFocusScrolling = useRef(false);
 
   const surahsOnPage = getSurahsForPage(currentPage);
   const juz = getJuzForPage(currentPage);
   const hizb = getHizbForPage(currentPage);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (flatListRef.current) {
+        isFocusScrolling.current = true;
+        flatListRef.current.scrollToIndex({
+          index: currentPage - 1,
+          animated: false,
+        });
+        setTimeout(() => {
+          isFocusScrolling.current = false;
+        }, 300);
+      }
+    }, [currentPage])
+  );
 
   const showFloating = () => {
     Animated.timing(floatingAnim, {
@@ -158,8 +190,26 @@ export default function MushafScreen() {
     }, 3500);
   };
 
+  const showZoomPanel = () => {
+    setShowZoom(true);
+    Animated.timing(zoomAnim, {
+      toValue: 1,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+    if (zoomHideTimer.current) clearTimeout(zoomHideTimer.current);
+    zoomHideTimer.current = setTimeout(() => {
+      Animated.timing(zoomAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }).start(() => setShowZoom(false));
+    }, 4000);
+  };
+
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: Array<{ index: number | null }> }) => {
+      if (isFocusScrolling.current) return;
       if (viewableItems.length > 0 && viewableItems[0].index !== null) {
         const page = viewableItems[0].index + 1;
         setCurrentPage(page);
@@ -202,6 +252,23 @@ export default function MushafScreen() {
     setGoToInput("");
   };
 
+  const handleZoomChange = (delta: number) => {
+    setZoom((prev) => {
+      const next = Math.round(Math.min(2.0, Math.max(0.7, prev + delta)) * 10) / 10;
+      return next;
+    });
+    Haptics.selectionAsync();
+    showZoomPanel();
+  };
+
+  const resetZoom = () => {
+    setZoom(1.0);
+    Haptics.selectionAsync();
+    showZoomPanel();
+  };
+
+  const bottomBase = tabBarH + 12 + insets.bottom;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
@@ -216,6 +283,7 @@ export default function MushafScreen() {
             onDoublePress={handleDoublePress}
             isBookmarked={isBookmarked(item)}
             brightness={brightness}
+            zoom={zoom}
           />
         )}
         horizontal
@@ -240,7 +308,7 @@ export default function MushafScreen() {
           styles.floatingBar,
           {
             borderColor: colors.border,
-            bottom: tabBarH + 12 + insets.bottom,
+            bottom: bottomBase,
             opacity: floatingAnim,
             transform: [
               {
@@ -281,13 +349,91 @@ export default function MushafScreen() {
         </LinearGradient>
       </Animated.View>
 
+      {showZoom && (
+        <Animated.View
+          style={[
+            styles.zoomPanel,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              bottom: bottomBase + 110,
+              right: 16,
+              opacity: zoomAnim,
+              transform: [
+                {
+                  scale: zoomAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.85, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={[styles.zoomBtn, { borderColor: colors.border }]}
+            onPress={() => handleZoomChange(0.1)}
+            activeOpacity={0.75}
+          >
+            <Text style={[styles.zoomBtnText, { color: colors.primary }]}>+</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={resetZoom} activeOpacity={0.75}>
+            <Text style={[styles.zoomValue, { color: colors.foreground }]}>
+              {Math.round(zoom * 100)}%
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.zoomBtn, { borderColor: colors.border }]}
+            onPress={() => handleZoomChange(-0.1)}
+            activeOpacity={0.75}
+          >
+            <Text style={[styles.zoomBtnText, { color: colors.primary }]}>−</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+
+      <TouchableOpacity
+        style={[
+          styles.zoomToggleBtn,
+          {
+            backgroundColor: zoom !== 1.0 ? colors.primary : colors.card,
+            borderColor: colors.border,
+            bottom: bottomBase + 58,
+            right: 16,
+          },
+        ]}
+        onPress={() => {
+          if (showZoom) {
+            if (zoomHideTimer.current) clearTimeout(zoomHideTimer.current);
+            Animated.timing(zoomAnim, {
+              toValue: 0,
+              duration: 300,
+              useNativeDriver: true,
+            }).start(() => setShowZoom(false));
+          } else {
+            showZoomPanel();
+          }
+          Haptics.selectionAsync();
+        }}
+        activeOpacity={0.8}
+      >
+        <Text
+          style={[
+            styles.zoomToggleIcon,
+            { color: zoom !== 1.0 ? colors.primaryForeground : colors.primary },
+          ]}
+        >
+          {zoom !== 1.0 ? `${Math.round(zoom * 100)}%` : "🔍"}
+        </Text>
+      </TouchableOpacity>
+
       <TouchableOpacity
         style={[
           styles.goToBtn,
           {
             backgroundColor: colors.card,
             borderColor: colors.border,
-            bottom: tabBarH + 12 + insets.bottom,
+            bottom: bottomBase,
           },
         ]}
         onPress={() => setShowGoTo(true)}
@@ -401,6 +547,61 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 1.5,
     opacity: 0.6,
+  },
+  zoomPanel: {
+    position: "absolute",
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 6,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
+    zIndex: 30,
+  },
+  zoomBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  zoomBtnText: {
+    fontSize: 22,
+    fontFamily: "Cairo_700Bold",
+    lineHeight: 26,
+  },
+  zoomValue: {
+    fontSize: 13,
+    fontFamily: "Cairo_700Bold",
+    textAlign: "center",
+    minWidth: 40,
+  },
+  zoomToggleBtn: {
+    position: "absolute",
+    right: 16,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+    zIndex: 10,
+  },
+  zoomToggleIcon: {
+    fontSize: 11,
+    fontFamily: "Cairo_700Bold",
+    textAlign: "center",
   },
   goToBtn: {
     position: "absolute",

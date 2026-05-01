@@ -138,7 +138,6 @@ const gs = StyleSheet.create({
 export default function SettingsScreen() {
   const {
     isDark, setIsDark,
-    fontSize, setFontSize,
     brightness, setBrightness,
     khatmaPlan, setKhatmaPlan,
     khatmaPagesRead, currentPage,
@@ -260,17 +259,6 @@ export default function SettingsScreen() {
 
         <SectionLabel label="اعدادات العرض" />
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <GradientSlider
-            label="حجم الخط"
-            value={fontSize}
-            min={0.8}
-            max={1.6}
-            step={0.1}
-            onChange={setFontSize}
-            colors={colors}
-            displayValue={`${Math.round(fontSize * 100)}%`}
-          />
-          <View style={[styles.cardDivider, { backgroundColor: colors.border }]} />
           <GradientSlider
             label="الاضاءة"
             value={brightness}

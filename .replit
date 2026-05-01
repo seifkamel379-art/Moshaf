@@ -11,6 +11,27 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "المصحف المثمن"
+
+[[workflows.workflow]]
+name = "المصحف المثمن"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=18643 pnpm --filter @workspace/mushaf run dev"
+waitForPort = 18643
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true

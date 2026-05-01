@@ -24,9 +24,10 @@ export default function IndexScreen() {
 
   const filtered = SURAHS.filter(
     (s) =>
-      s.nameAr.includes(search) ||
-      s.nameEn.toLowerCase().includes(search.toLowerCase()) ||
-      String(s.number).includes(search)
+      s.number !== 1 &&
+      (s.nameAr.includes(search) ||
+        s.nameEn.toLowerCase().includes(search.toLowerCase()) ||
+        String(s.number).includes(search))
   );
 
   const goToSurah = (page: number) => {
