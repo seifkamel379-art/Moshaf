@@ -47,6 +47,8 @@ interface AppContextType {
   khatmaPagesRead: number;
   markPageRead: (page: number) => void;
   loaded: boolean;
+  mushafFullScreen: boolean;
+  setMushafFullScreen: (v: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -62,6 +64,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [khatmaPlan, setKhatmaPlanState] = useState<KhatmaPlan | null>(null);
   const [khatmaPagesRead, setKhatmaPagesRead] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  const [mushafFullScreen, setMushafFullScreen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -176,6 +179,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         khatmaPagesRead,
         markPageRead,
         loaded,
+        mushafFullScreen,
+        setMushafFullScreen,
       }}
     >
       {children}

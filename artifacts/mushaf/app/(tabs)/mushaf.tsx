@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const { width: SW, height: SH } = Dimensions.get("window");
 
 const MUSHAF_BG = "#F5EDD6";
+const TAP_WINDOW = 400;
 
 function BookmarkRibbon({ colors }: { colors: ReturnType<typeof useColors> }) {
   return (
@@ -104,6 +105,7 @@ function MushafPage({
   isDark,
   colors,
   onDoublePress,
+  onTriplePress,
   isBookmarked,
   brightness,
   zoom,
@@ -112,19 +114,27 @@ function MushafPage({
   isDark: boolean;
   colors: ReturnType<typeof useColors>;
   onDoublePress: (page: number) => void;
+  onTriplePress: () => void;
   isBookmarked: boolean;
   brightness: number;
   zoom: number;
 }) {
-  const lastTap = useRef(0);
+  const tapCount = useRef(0);
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const src = MUSHAF_PAGES[pageNumber];
 
   const handlePress = () => {
-    const now = Date.now();
-    if (now - lastTap.current < 380) {
-      onDoublePress(pageNumber);
-    }
-    lastTap.current = now;
+    tapCount.current += 1;
+    if (tapTimer.current) clearTimeout(tapTimer.current);
+    tapTimer.current = setTimeout(() => {
+      const count = tapCount.current;
+      tapCount.current = 0;
+      if (count === 2) {
+        onDoublePress(pageNumber);
+      } else if (count >= 3) {
+        onTriplePress();
+      }
+    }, TAP_WINDOW);
   };
 
   const dynamicImageStyle: any = {
@@ -179,6 +189,7 @@ export default function MushafScreen() {
     isDark,
     markPageRead,
     brightness,
+    setMushafFullScreen,
   } = useApp();
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -187,8 +198,10 @@ export default function MushafScreen() {
   const [goToInput, setGoToInput] = useState("");
   const [zoom, setZoom] = useState(1.0);
   const [showZoom, setShowZoom] = useState(false);
+  const [uiVisible, setUiVisible] = useState(false);
   const floatingAnim = useRef(new Animated.Value(0)).current;
   const zoomAnim = useRef(new Animated.Value(0)).current;
+  const uiAnim = useRef(new Animated.Value(0)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const zoomHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFocusScrolling = useRef(false);
@@ -197,8 +210,20 @@ export default function MushafScreen() {
   const juz = getJuzForPage(currentPage);
   const hizb = getHizbForPage(currentPage);
 
+  const animateUi = useCallback((visible: boolean, cb?: () => void) => {
+    Animated.timing(uiAnim, {
+      toValue: visible ? 1 : 0,
+      duration: 280,
+      useNativeDriver: true,
+    }).start(cb);
+  }, [uiAnim]);
+
   useFocusEffect(
     useCallback(() => {
+      setUiVisible(false);
+      setMushafFullScreen(true);
+      uiAnim.setValue(0);
+
       if (flatListRef.current) {
         isFocusScrolling.current = true;
         flatListRef.current.scrollToIndex({
@@ -209,8 +234,22 @@ export default function MushafScreen() {
           isFocusScrolling.current = false;
         }, 300);
       }
-    }, [currentPage])
+
+      return () => {
+        setMushafFullScreen(false);
+        setUiVisible(false);
+        uiAnim.setValue(0);
+      };
+    }, [currentPage, setMushafFullScreen])
   );
+
+  const toggleUi = useCallback(() => {
+    const next = !uiVisible;
+    setUiVisible(next);
+    setMushafFullScreen(!next);
+    animateUi(next);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  }, [uiVisible, setMushafFullScreen, animateUi]);
 
   const showFloating = () => {
     Animated.timing(floatingAnim, {
@@ -252,10 +291,10 @@ export default function MushafScreen() {
         const page = viewableItems[0].index + 1;
         setCurrentPage(page);
         markPageRead(page);
-        showFloating();
+        if (uiVisible) showFloating();
       }
     },
-    [setCurrentPage, markPageRead]
+    [setCurrentPage, markPageRead, uiVisible]
   );
 
   const handleDoublePress = useCallback(
@@ -320,8 +359,8 @@ export default function MushafScreen() {
     showZoomPanel();
   };
 
-  const bottomBase = tabBarH + 12 + insets.bottom;
-  const topBase = (Platform.OS === "web" ? 16 : insets.top + 8);
+  const bottomBase = (uiVisible ? tabBarH : 0) + 12 + insets.bottom;
+  const topBase = Platform.OS === "web" ? 16 : insets.top + 8;
   const bookmarked = isBookmarked(currentPage);
 
   return (
@@ -336,6 +375,7 @@ export default function MushafScreen() {
             isDark={isDark}
             colors={colors}
             onDoublePress={handleDoublePress}
+            onTriplePress={toggleUi}
             isBookmarked={isBookmarked(item)}
             brightness={brightness}
             zoom={zoom}
@@ -358,200 +398,199 @@ export default function MushafScreen() {
         removeClippedSubviews={Platform.OS !== "web"}
       />
 
-      {/* Bookmark button — top right */}
-      <TouchableOpacity
-        style={[
-          styles.bookmarkBtn,
-          {
-            backgroundColor: bookmarked ? colors.primary : colors.card,
-            borderColor: bookmarked ? colors.primary : colors.border,
-            top: topBase,
-            right: 16,
-          },
-        ]}
-        onPress={handleBookmarkPress}
-        activeOpacity={0.8}
-      >
-        <View style={styles.bookmarkIconWrap}>
-          <View
-            style={[
-              styles.bookmarkIconBody,
-              {
-                borderColor: bookmarked ? colors.primaryForeground : colors.primary,
-                backgroundColor: "transparent",
-              },
-            ]}
-          />
-          <View
-            style={[
-              styles.bookmarkIconTip,
-              {
-                borderTopColor: bookmarked ? colors.primaryForeground : colors.primary,
-              },
-            ]}
-          />
-        </View>
-      </TouchableOpacity>
-
+      {/* All overlay UI — fades in/out with uiAnim */}
       <Animated.View
-        style={[
-          styles.floatingBar,
-          {
-            borderColor: colors.border,
-            bottom: bottomBase,
-            opacity: floatingAnim,
-            transform: [
-              {
-                translateY: floatingAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [12, 0],
-                }),
-              },
-            ],
-          },
-        ]}
-        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, { opacity: uiAnim }]}
+        pointerEvents={uiVisible ? "box-none" : "none"}
       >
-        <LinearGradient
-          colors={
-            isDark
-              ? ["rgba(34,26,10,0.97)", "rgba(22,14,4,0.95)"]
-              : ["rgba(250,244,228,0.97)", "rgba(240,230,200,0.95)"]
-          }
-          style={styles.floatingInner}
+        {/* Bookmark button — top right */}
+        <TouchableOpacity
+          style={[
+            styles.bookmarkBtn,
+            {
+              backgroundColor: bookmarked ? colors.primary : colors.card,
+              borderColor: bookmarked ? colors.primary : colors.border,
+              top: topBase,
+              right: 16,
+            },
+          ]}
+          onPress={handleBookmarkPress}
+          activeOpacity={0.8}
         >
-          <Text style={[styles.floatingTitle, { color: colors.foreground }]}>
-            {surahsOnPage.map((s) => s.nameAr).join("  —  ")}
-          </Text>
-          <View style={styles.floatingRow}>
-            <Text style={[styles.floatingMeta, { color: colors.primary }]}>
-              الجزء {juz}
-            </Text>
-            <View style={[styles.floatingDot, { backgroundColor: colors.accent }]} />
-            <Text style={[styles.floatingMeta, { color: colors.primary }]}>
-              الحزب {hizb}
-            </Text>
-            <View style={[styles.floatingDot, { backgroundColor: colors.accent }]} />
-            <Text style={[styles.floatingMeta, { color: colors.mutedForeground }]}>
-              صفحة {currentPage}
-            </Text>
+          <View style={styles.bookmarkIconWrap}>
+            <View
+              style={[
+                styles.bookmarkIconBody,
+                {
+                  borderColor: bookmarked ? colors.primaryForeground : colors.primary,
+                  backgroundColor: "transparent",
+                },
+              ]}
+            />
+            <View
+              style={[
+                styles.bookmarkIconTip,
+                {
+                  borderTopColor: bookmarked ? colors.primaryForeground : colors.primary,
+                },
+              ]}
+            />
           </View>
-        </LinearGradient>
-      </Animated.View>
+        </TouchableOpacity>
 
-      {showZoom && (
+        {/* Page info floating bar */}
         <Animated.View
           style={[
-            styles.zoomPanel,
+            styles.floatingBar,
             {
-              backgroundColor: colors.card,
               borderColor: colors.border,
-              bottom: bottomBase + 110,
-              right: 16,
-              opacity: zoomAnim,
+              bottom: bottomBase,
+              opacity: floatingAnim,
               transform: [
                 {
-                  scale: zoomAnim.interpolate({
+                  translateY: floatingAnim.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [0.85, 1],
+                    outputRange: [12, 0],
                   }),
                 },
               ],
             },
           ]}
+          pointerEvents="none"
         >
-          <TouchableOpacity
-            onPress={() => handleZoomChange(0.1)}
-            activeOpacity={0.75}
+          <LinearGradient
+            colors={
+              isDark
+                ? ["rgba(34,26,10,0.97)", "rgba(22,14,4,0.95)"]
+                : ["rgba(250,244,228,0.97)", "rgba(240,230,200,0.95)"]
+            }
+            style={styles.floatingInner}
           >
-            <LinearGradient
-              colors={[colors.accent, colors.primary]}
-              style={styles.zoomBtn3D}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
-            >
-              <Text style={[styles.zoomBtnText3D, { color: colors.primaryForeground }]}>＋</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={resetZoom} activeOpacity={0.75}>
-            <Text style={[styles.zoomValue, { color: colors.foreground }]}>
-              {Math.round(zoom * 100)}%
+            <Text style={[styles.floatingTitle, { color: colors.foreground }]}>
+              {surahsOnPage.map((s) => s.nameAr).join("  —  ")}
             </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => handleZoomChange(-0.1)}
-            activeOpacity={0.75}
-          >
-            <LinearGradient
-              colors={[colors.accent, colors.primary]}
-              style={styles.zoomBtn3D}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
-            >
-              <Text style={[styles.zoomBtnText3D, { color: colors.primaryForeground }]}>－</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+            <View style={styles.floatingRow}>
+              <Text style={[styles.floatingMeta, { color: colors.primary }]}>
+                الجزء {juz}
+              </Text>
+              <View style={[styles.floatingDot, { backgroundColor: colors.accent }]} />
+              <Text style={[styles.floatingMeta, { color: colors.primary }]}>
+                الحزب {hizb}
+              </Text>
+              <View style={[styles.floatingDot, { backgroundColor: colors.accent }]} />
+              <Text style={[styles.floatingMeta, { color: colors.mutedForeground }]}>
+                صفحة {currentPage}
+              </Text>
+            </View>
+          </LinearGradient>
         </Animated.View>
-      )}
 
-      <TouchableOpacity
-        style={[
-          styles.zoomToggleBtn,
-          {
-            backgroundColor: zoom !== 1.0 ? colors.primary : colors.card,
-            borderColor: zoom !== 1.0 ? colors.primary : colors.border,
-            bottom: bottomBase + 58,
-            right: 16,
-            shadowColor: colors.primary,
-          },
-        ]}
-        onPress={() => {
-          if (showZoom) {
-            if (zoomHideTimer.current) clearTimeout(zoomHideTimer.current);
-            Animated.timing(zoomAnim, {
-              toValue: 0,
-              duration: 300,
-              useNativeDriver: true,
-            }).start(() => setShowZoom(false));
-          } else {
-            showZoomPanel();
-          }
-          Haptics.selectionAsync();
-        }}
-        activeOpacity={0.8}
-      >
-        {zoom !== 1.0 ? (
-          <Text
+        {/* Zoom panel */}
+        {showZoom && (
+          <Animated.View
             style={[
-              styles.zoomToggleIcon,
-              { color: colors.primaryForeground },
+              styles.zoomPanel,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                bottom: bottomBase + 110,
+                right: 16,
+                opacity: zoomAnim,
+                transform: [
+                  {
+                    scale: zoomAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.85, 1],
+                    }),
+                  },
+                ],
+              },
             ]}
           >
-            {Math.round(zoom * 100)}%
-          </Text>
-        ) : (
-          <ZoomIcon color={colors.primary} />
-        )}
-      </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleZoomChange(0.1)} activeOpacity={0.75}>
+              <LinearGradient
+                colors={[colors.accent, colors.primary]}
+                style={styles.zoomBtn3D}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+              >
+                <Text style={[styles.zoomBtnText3D, { color: colors.primaryForeground }]}>＋</Text>
+              </LinearGradient>
+            </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[
-          styles.goToBtn,
-          {
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-            bottom: bottomBase,
-          },
-        ]}
-        onPress={() => setShowGoTo(true)}
-        activeOpacity={0.8}
-      >
-        <Text style={[styles.goToBtnText, { color: colors.primary }]}>
-          {currentPage}
-        </Text>
-      </TouchableOpacity>
+            <TouchableOpacity onPress={resetZoom} activeOpacity={0.75}>
+              <Text style={[styles.zoomValue, { color: colors.foreground }]}>
+                {Math.round(zoom * 100)}%
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => handleZoomChange(-0.1)} activeOpacity={0.75}>
+              <LinearGradient
+                colors={[colors.accent, colors.primary]}
+                style={styles.zoomBtn3D}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+              >
+                <Text style={[styles.zoomBtnText3D, { color: colors.primaryForeground }]}>－</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
+        {/* Zoom toggle button */}
+        <TouchableOpacity
+          style={[
+            styles.zoomToggleBtn,
+            {
+              backgroundColor: zoom !== 1.0 ? colors.primary : colors.card,
+              borderColor: zoom !== 1.0 ? colors.primary : colors.border,
+              bottom: bottomBase + 58,
+              right: 16,
+              shadowColor: colors.primary,
+            },
+          ]}
+          onPress={() => {
+            if (showZoom) {
+              if (zoomHideTimer.current) clearTimeout(zoomHideTimer.current);
+              Animated.timing(zoomAnim, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+              }).start(() => setShowZoom(false));
+            } else {
+              showZoomPanel();
+            }
+            Haptics.selectionAsync();
+          }}
+          activeOpacity={0.8}
+        >
+          {zoom !== 1.0 ? (
+            <Text style={[styles.zoomToggleIcon, { color: colors.primaryForeground }]}>
+              {Math.round(zoom * 100)}%
+            </Text>
+          ) : (
+            <ZoomIcon color={colors.primary} />
+          )}
+        </TouchableOpacity>
+
+        {/* Go-to page button */}
+        <TouchableOpacity
+          style={[
+            styles.goToBtn,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              bottom: bottomBase,
+            },
+          ]}
+          onPress={() => setShowGoTo(true)}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.goToBtnText, { color: colors.primary }]}>
+            {currentPage}
+          </Text>
+        </TouchableOpacity>
+      </Animated.View>
 
       <Modal
         visible={showGoTo}
@@ -801,18 +840,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     paddingVertical: 12,
-    paddingHorizontal: 14,
-    fontSize: 22,
+    paddingHorizontal: 16,
+    fontSize: 18,
     fontFamily: "Cairo_700Bold",
+    textAlign: "center",
   },
   goToConfirm: {
     width: "100%",
+    paddingVertical: 13,
     borderRadius: 10,
-    paddingVertical: 12,
     alignItems: "center",
   },
   goToConfirmText: {
-    fontSize: 15,
     fontFamily: "Cairo_700Bold",
+    fontSize: 16,
   },
 });
