@@ -10,12 +10,12 @@ module.exports = {
     slug: "mushaf",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/images/logo.png",
+    icon: "./assets/images/logo_nobg.png",
     scheme: "mushaf",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     splash: {
-      image: "./assets/images/logo.png",
+      image: "./assets/images/logo_nobg.png",
       resizeMode: "contain",
       backgroundColor: "#F0E6C8",
     },
@@ -26,12 +26,12 @@ module.exports = {
     android: {
       package: "com.seifkamel.mushaf",
       adaptiveIcon: {
-        foregroundImage: "./assets/images/logo.png",
+        foregroundImage: "./assets/images/logo_nobg.png",
         backgroundColor: "#F0E6C8",
       },
     },
     web: {
-      favicon: "./assets/images/logo.png",
+      favicon: "./assets/images/logo_nobg.png",
     },
     plugins: [
       [

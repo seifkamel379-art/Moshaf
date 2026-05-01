@@ -33,14 +33,14 @@ export default function IndexScreen() {
   const goToSurah = (page: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setCurrentPage(page);
-    router.push("/(tabs)/mushaf");
+    router.navigate("/(tabs)/mushaf");
   };
 
   const goToBookmark = () => {
     if (!lastBookmark) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setCurrentPage(lastBookmark.page);
-    router.push("/(tabs)/mushaf");
+    router.navigate("/(tabs)/mushaf");
   };
 
   const tabBarH = Platform.OS === "web" ? 84 : 68;
