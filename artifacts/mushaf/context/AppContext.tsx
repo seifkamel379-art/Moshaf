@@ -9,9 +9,7 @@ const STORAGE_KEYS = {
   THEME: "mushaf_theme",
   FONT_SIZE: "mushaf_font_size",
   BRIGHTNESS: "mushaf_brightness",
-  OPACITY: "mushaf_opacity",
   KHATMA_PLAN: "mushaf_khatma_plan",
-  KHATMA_START: "mushaf_khatma_start",
   KHATMA_PAGES_READ: "mushaf_khatma_pages_read",
 };
 
@@ -44,8 +42,6 @@ interface AppContextType {
   setFontSize: (v: number) => void;
   brightness: number;
   setBrightness: (v: number) => void;
-  opacity: number;
-  setOpacity: (v: number) => void;
   khatmaPlan: KhatmaPlan | null;
   setKhatmaPlan: (plan: KhatmaPlan | null) => void;
   khatmaPagesRead: number;
@@ -63,7 +59,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isDark, setIsDarkState] = useState(systemScheme === "dark");
   const [fontSize, setFontSizeState] = useState(1.0);
   const [brightness, setBrightnessState] = useState(1.0);
-  const [opacity, setOpacityState] = useState(1.0);
   const [khatmaPlan, setKhatmaPlanState] = useState<KhatmaPlan | null>(null);
   const [khatmaPagesRead, setKhatmaPagesRead] = useState(0);
   const [loaded, setLoaded] = useState(false);
@@ -71,14 +66,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const [name, page, bk, theme, fs, br, op, kp, kpr] = await AsyncStorage.multiGet([
+        const [name, page, bk, theme, fs, br, kp, kpr] = await AsyncStorage.multiGet([
           STORAGE_KEYS.USER_NAME,
           STORAGE_KEYS.CURRENT_PAGE,
           STORAGE_KEYS.BOOKMARKS,
           STORAGE_KEYS.THEME,
           STORAGE_KEYS.FONT_SIZE,
           STORAGE_KEYS.BRIGHTNESS,
-          STORAGE_KEYS.OPACITY,
           STORAGE_KEYS.KHATMA_PLAN,
           STORAGE_KEYS.KHATMA_PAGES_READ,
         ]);
@@ -88,7 +82,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (theme[1]) setIsDarkState(theme[1] === "dark");
         if (fs[1]) setFontSizeState(Number(fs[1]));
         if (br[1]) setBrightnessState(Number(br[1]));
-        if (op[1]) setOpacityState(Number(op[1]));
         if (kp[1]) setKhatmaPlanState(JSON.parse(kp[1]));
         if (kpr[1]) setKhatmaPagesRead(Number(kpr[1]));
       } finally {
@@ -143,11 +136,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(STORAGE_KEYS.BRIGHTNESS, String(v));
   }, []);
 
-  const setOpacity = useCallback((v: number) => {
-    setOpacityState(v);
-    AsyncStorage.setItem(STORAGE_KEYS.OPACITY, String(v));
-  }, []);
-
   const setKhatmaPlan = useCallback((plan: KhatmaPlan | null) => {
     setKhatmaPlanState(plan);
     if (plan) {
@@ -183,8 +171,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setFontSize,
         brightness,
         setBrightness,
-        opacity,
-        setOpacity,
         khatmaPlan,
         setKhatmaPlan,
         khatmaPagesRead,

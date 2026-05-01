@@ -11,7 +11,6 @@ export function useColors(): ColorScheme & { radius: number } {
   } catch {
     isDark = false;
   }
-  const darkColors = "dark" in colors ? (colors as typeof colors & { dark: typeof colors.light }).dark : colors.light;
-  const scheme = isDark ? darkColors : colors.light;
+  const scheme = isDark ? colors.dark : colors.light;
   return { ...scheme, radius: colors.radius };
 }

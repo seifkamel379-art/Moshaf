@@ -25,7 +25,7 @@ export default function IndexScreen() {
   const filtered = SURAHS.filter(
     (s) =>
       s.nameAr.includes(search) ||
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
+      s.nameEn.toLowerCase().includes(search.toLowerCase()) ||
       String(s.number).includes(search)
   );
 
@@ -74,7 +74,7 @@ export default function IndexScreen() {
             { backgroundColor: colors.background, borderColor: colors.border },
           ]}
         >
-          <Text style={[styles.searchIcon, { color: colors.mutedForeground }]}>🔍</Text>
+          <Text style={[styles.searchIcon, { color: colors.mutedForeground }]}>بحث</Text>
           <TextInput
             style={[styles.searchInput, { color: colors.foreground }]}
             placeholder="ابحث عن سورة..."
