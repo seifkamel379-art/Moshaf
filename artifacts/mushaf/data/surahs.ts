@@ -11,14 +11,15 @@ export interface Surah {
 
 // Page numbers calibrated to this specific mushaf:
 // مصحف الشاذلي رحمه الله برواية ورش عن نافع — 482 pages
-// Verified via pixel-level scan of all 482 page images (Python/PIL separator-line detection)
-// Confirmed mid-page Surah starts: Al-Imran p39, Al-Anfal p140
+// Verified via pixel-level image inspection (Python/PIL separator-line detection + visual)
+// Confirmed mid-page Surah starts: Al-Imran p39, Al-Anfal p140, Al-Maidah p84, As-Saffat p356, Al-Fath p407
+// Corrected: Al-Maidah 86→84, As-Saffat 357→356, Al-Fath 408→407
 export const SURAHS: Surah[] = [
   { number: 1,   nameAr: "الفاتحة",      nameEn: "Al-Fatihah",      verses: 7,   page: 1,   juz: 1,  hizb: 1,  type: "meccan" },
   { number: 2,   nameAr: "البقرة",        nameEn: "Al-Baqarah",      verses: 286, page: 1,   juz: 1,  hizb: 1,  type: "medinan" },
   { number: 3,   nameAr: "آل عمران",      nameEn: "Ali Imran",       verses: 200, page: 39,  juz: 3,  hizb: 6,  type: "medinan" },
   { number: 4,   nameAr: "النساء",        nameEn: "An-Nisa",         verses: 176, page: 64,  juz: 4,  hizb: 8,  type: "medinan" },
-  { number: 5,   nameAr: "المائدة",       nameEn: "Al-Maidah",       verses: 120, page: 86,  juz: 6,  hizb: 11, type: "medinan" },
+  { number: 5,   nameAr: "المائدة",       nameEn: "Al-Maidah",       verses: 120, page: 84,  juz: 6,  hizb: 11, type: "medinan" },
   { number: 6,   nameAr: "الأنعام",       nameEn: "Al-Anam",         verses: 165, page: 102, juz: 7,  hizb: 14, type: "meccan" },
   { number: 7,   nameAr: "الأعراف",       nameEn: "Al-Araf",         verses: 206, page: 120, juz: 8,  hizb: 15, type: "meccan" },
   { number: 8,   nameAr: "الأنفال",       nameEn: "Al-Anfal",        verses: 75,  page: 140, juz: 9,  hizb: 18, type: "medinan" },
@@ -50,7 +51,7 @@ export const SURAHS: Surah[] = [
   { number: 34,  nameAr: "سبأ",           nameEn: "Saba",            verses: 54,  page: 342, juz: 22, hizb: 43, type: "meccan" },
   { number: 35,  nameAr: "فاطر",          nameEn: "Fatir",           verses: 45,  page: 347, juz: 22, hizb: 44, type: "meccan" },
   { number: 36,  nameAr: "يس",            nameEn: "Ya-Sin",          verses: 83,  page: 352, juz: 22, hizb: 44, type: "meccan" },
-  { number: 37,  nameAr: "الصافات",       nameEn: "As-Saffat",       verses: 182, page: 357, juz: 23, hizb: 45, type: "meccan" },
+  { number: 37,  nameAr: "الصافات",       nameEn: "As-Saffat",       verses: 182, page: 356, juz: 23, hizb: 45, type: "meccan" },
   { number: 38,  nameAr: "ص",             nameEn: "Sad",             verses: 88,  page: 362, juz: 23, hizb: 46, type: "meccan" },
   { number: 39,  nameAr: "الزمر",         nameEn: "Az-Zumar",        verses: 75,  page: 366, juz: 23, hizb: 46, type: "meccan" },
   { number: 40,  nameAr: "غافر",          nameEn: "Ghafir",          verses: 85,  page: 373, juz: 24, hizb: 47, type: "meccan" },
@@ -61,7 +62,7 @@ export const SURAHS: Surah[] = [
   { number: 45,  nameAr: "الجاثية",       nameEn: "Al-Jathiyah",     verses: 37,  page: 399, juz: 25, hizb: 50, type: "meccan" },
   { number: 46,  nameAr: "الأحقاف",       nameEn: "Al-Ahqaf",        verses: 35,  page: 401, juz: 26, hizb: 51, type: "meccan" },
   { number: 47,  nameAr: "محمد",          nameEn: "Muhammad",        verses: 38,  page: 405, juz: 26, hizb: 51, type: "medinan" },
-  { number: 48,  nameAr: "الفتح",         nameEn: "Al-Fath",         verses: 29,  page: 408, juz: 26, hizb: 52, type: "medinan" },
+  { number: 48,  nameAr: "الفتح",         nameEn: "Al-Fath",         verses: 29,  page: 407, juz: 26, hizb: 52, type: "medinan" },
   { number: 49,  nameAr: "الحجرات",       nameEn: "Al-Hujurat",      verses: 18,  page: 411, juz: 26, hizb: 52, type: "medinan" },
   { number: 50,  nameAr: "ق",             nameEn: "Qaf",             verses: 45,  page: 414, juz: 26, hizb: 52, type: "meccan" },
   { number: 51,  nameAr: "الذاريات",      nameEn: "Adh-Dhariyat",    verses: 60,  page: 415, juz: 26, hizb: 52, type: "meccan" },
