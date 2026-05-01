@@ -26,6 +26,10 @@ const { width: SW, height: SH } = Dimensions.get("window");
 const MUSHAF_BG = "#F5EDD6";
 const TAP_WINDOW = 400;
 
+function toArabicNumerals(n: number): string {
+  return n.toString().replace(/[0-9]/g, (d) => "٠١٢٣٤٥٦٧٨٩"[+d]);
+}
+
 function BookmarkRibbon({ colors }: { colors: ReturnType<typeof useColors> }) {
   return (
     <View style={[ribbon.wrap, { backgroundColor: colors.primary }]}>
@@ -175,6 +179,13 @@ function MushafPage({
           ]}
         />
       )}
+
+      {/* Page number — bottom center like a real mushaf */}
+      <View style={styles.pageNumWrap} pointerEvents="none">
+        <Text style={styles.pageNumText}>
+          {"❖  " + toArabicNumerals(pageNumber) + "  ❖"}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -363,6 +374,10 @@ export default function MushafScreen() {
   const topBase = Platform.OS === "web" ? 16 : insets.top + 8;
   const bookmarked = isBookmarked(currentPage);
 
+  // Center overlay buttons above الخصائص tab (rightmost of 3 equal tabs)
+  const SETTINGS_BTN_RIGHT = Math.max(8, Math.floor(SW / 6 - 23));
+  const floatingBarRight = SETTINGS_BTN_RIGHT + 54;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
@@ -445,6 +460,7 @@ export default function MushafScreen() {
             {
               borderColor: colors.border,
               bottom: bottomBase,
+              right: floatingBarRight,
               opacity: floatingAnim,
               transform: [
                 {
@@ -494,7 +510,7 @@ export default function MushafScreen() {
                 backgroundColor: colors.card,
                 borderColor: colors.border,
                 bottom: bottomBase + 110,
-                right: 16,
+                right: SETTINGS_BTN_RIGHT,
                 opacity: zoomAnim,
                 transform: [
                   {
@@ -545,7 +561,7 @@ export default function MushafScreen() {
               backgroundColor: zoom !== 1.0 ? colors.primary : colors.card,
               borderColor: zoom !== 1.0 ? colors.primary : colors.border,
               bottom: bottomBase + 58,
-              right: 16,
+              right: SETTINGS_BTN_RIGHT,
               shadowColor: colors.primary,
             },
           ]}
@@ -581,6 +597,7 @@ export default function MushafScreen() {
               backgroundColor: colors.card,
               borderColor: colors.border,
               bottom: bottomBase,
+              right: SETTINGS_BTN_RIGHT,
             },
           ]}
           onPress={() => setShowGoTo(true)}
@@ -696,7 +713,6 @@ const styles = StyleSheet.create({
   floatingBar: {
     position: "absolute",
     left: 16,
-    right: 68,
     borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
@@ -773,7 +789,6 @@ const styles = StyleSheet.create({
   },
   zoomToggleBtn: {
     position: "absolute",
-    right: 16,
     width: 46,
     height: 46,
     borderRadius: 23,
@@ -793,7 +808,6 @@ const styles = StyleSheet.create({
   },
   goToBtn: {
     position: "absolute",
-    right: 16,
     width: 46,
     height: 46,
     borderRadius: 23,
@@ -854,5 +868,21 @@ const styles = StyleSheet.create({
   goToConfirmText: {
     fontFamily: "Cairo_700Bold",
     fontSize: 16,
+  },
+  pageNumWrap: {
+    position: "absolute",
+    bottom: 10,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    pointerEvents: "none",
+  },
+  pageNumText: {
+    fontFamily: "Amiri_700Bold",
+    fontSize: 13,
+    color: "#5A3E1B",
+    letterSpacing: 1,
+    textAlign: "center",
+    opacity: 0.75,
   },
 });
