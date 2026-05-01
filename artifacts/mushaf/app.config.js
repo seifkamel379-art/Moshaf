@@ -47,6 +47,9 @@ module.exports = {
       router: {
         origin,
       },
+      eas: {
+        projectId: "b42b5e53-f77d-4e24-aeda-7286c063e56f",
+      },
     },
     experiments: {
       typedRoutes: true,
